@@ -115,15 +115,22 @@ export async function getTodayRoutine(): Promise<RoutineItem[]> {
   }
 
   if (completions) {
-    completions.forEach((c: any) => {
+    type RoutineJoin = { title: string; category: string; description: string | null }
+    type CompletionRow = {
+      id: string
+      completed_at: string
+      routine_id: string
+      routines: RoutineJoin | RoutineJoin[] | null
+    }
+    ;(completions as CompletionRow[]).forEach((c) => {
       const date = new Date(c.completed_at)
-      const routine = c.routines || {}
+      const routine = Array.isArray(c.routines) ? c.routines[0] : c.routines
       routineItems.push({
         id: c.id,
         routine_id: c.routine_id,
-        type: routine.category || 'habit',
-        title: routine.title || 'Hábito Concluído',
-        details: routine.description || 'Concluído no Dashboard',
+        type: (routine?.category || 'habit') as RoutineCategory,
+        title: routine?.title || 'Hábito Concluído',
+        details: routine?.description || 'Concluído no Dashboard',
         time: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         loggedAt: c.completed_at
       })

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getProfile } from '@/app/actions/profile'
 import { getScheduledRoutines } from '@/app/actions/scheduled-routines'
-import { RoutineClient } from './routine-client'
+import { RoutineClient } from '@/app/dashboard/routine/routine-client'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 
@@ -9,7 +9,7 @@ export const metadata = {
   title: 'Minha Rotina | CheckFit',
   description: 'Gerencie seus hábitos diários, treinos e refeições.',
 }
-
+ 
 export default async function RoutinePage() {
   const { profile, error } = await getProfile()
 

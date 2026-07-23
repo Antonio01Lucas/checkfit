@@ -37,7 +37,7 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: Routin
     
     // Criar item otimista falso
     const newItem: RoutineItem = {
-      id: Math.random().toString(),
+      id: Date.now().toString(),
       type: isAddingMode as 'workout' | 'meal',
       title: name,
       details: isAddingMode === 'workout' 
@@ -75,9 +75,9 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: Routin
     
     const now = new Date()
     
-    // Create optimistic completion item
+    // Create optimistic completion item — ID is derived from routine.id to be deterministic
     const newItem: RoutineItem = {
-      id: Math.random().toString(),
+      id: `optimistic-${routine.id}`,
       routine_id: routine.id,
       type: routine.category,
       title: routine.title,

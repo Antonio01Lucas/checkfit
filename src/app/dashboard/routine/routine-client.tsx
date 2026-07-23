@@ -36,7 +36,7 @@ export function RoutineClient({ initialRoutines }: RoutineClientProps) {
       if (success) {
         // Optimistic refresh
         const newItem: RoutineItem = {
-          id: Math.random().toString(), // fake ID for now, Server Action revalidates page anyway
+          id: Date.now().toString(), // fake ID for now, Server Action revalidates page anyway
           user_id: '',
           title: newTitle,
           category: newCategory,
