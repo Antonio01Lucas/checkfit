@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition, useOptimistic } from 'react'
-import { Plus, Dumbbell, Utensils, CheckCircle2, X, Clock, Droplets, Sparkles } from 'lucide-react'
+import { Dumbbell, Utensils, CheckCircle2, X, Clock, Droplets, Sparkles, Loader2 } from 'lucide-react'
 import { type RoutineItem, logWorkout, logMeal } from '@/app/actions/routine'
-import type { RoutineItem as DBScheduledRoutine, RoutineCategory } from '@/types/database'
+import { completeScheduledRoutine } from '@/app/actions/scheduled-routines'
+import type { RoutineItem as DBScheduledRoutine } from '@/types/database'
 
 interface RoutineTimelineProps {
   initialItems: RoutineItem[]
@@ -63,6 +64,38 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: Routin
         console.error('Falha ao adicionar item à rotina:', error)
         alert('Falha ao salvar registro.')
       }
+    })
+  }
+
+  const [completingId, setCompletingId] = useState<string | null>(null)
+
+  const handleCompleteRoutine = (routine: DBScheduledRoutine) => {
+    if (isPending) return
+    setCompletingId(routine.id)
+    
+    const now = new Date()
+    
+    // Create optimistic completion item
+    const newItem: RoutineItem = {
+      id: Math.random().toString(),
+      routine_id: routine.id,
+      type: routine.category,
+      title: routine.title,
+      details: routine.description || 'Concluído no Dashboard',
+      time: routine.scheduled_time.substring(0, 5),
+      loggedAt: now.toISOString()
+    }
+
+    startTransition(async () => {
+      addOptimisticItem(newItem)
+      
+      const { success, error } = await completeScheduledRoutine(routine.id)
+      
+      if (!success) {
+        alert(error || 'Falha ao registrar conclusão.')
+        // In a real app with proper error boundary/state, we would revert optimistic update here
+      }
+      setCompletingId(null)
     })
   }
 
@@ -161,14 +194,17 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: Routin
               type: item.type,
               loggedAt: item.loggedAt
             })),
-            ...scheduledRoutines.map(routine => ({
-              status: 'pending' as const,
-              id: routine.id,
-              title: routine.title,
-              details: routine.description || 'Planejado para hoje',
-              time: routine.scheduled_time.substring(0, 5),
-              type: routine.category,
-            }))
+            ...scheduledRoutines
+              // Filter out routines that are already completed today
+              .filter(routine => !optimisticItems.some(opt => opt.routine_id === routine.id))
+              .map(routine => ({
+                status: 'pending' as const,
+                id: routine.id,
+                title: routine.title,
+                details: routine.description || 'Planejado para hoje',
+                time: routine.scheduled_time.substring(0, 5),
+                type: routine.category,
+              }))
           ]
 
           // Order by time
@@ -194,11 +230,27 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: Routin
               >
                 <div className="flex items-center gap-4">
                   {/* Status Indicator */}
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                    isCompleted ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'
-                  }`}>
-                    {isCompleted ? <CheckCircle2 className="w-5 h-5 stroke-[2.5]" /> : <Clock className="w-4 h-4" />}
-                  </div>
+                  {isCompleted ? (
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center transition-all bg-emerald-500/20 text-emerald-400">
+                      <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => handleCompleteRoutine(scheduledRoutines.find(r => r.id === item.id)!)}
+                      disabled={isPending && completingId === item.id}
+                      title="Marcar como concluído"
+                      className="w-8 h-8 rounded-xl flex items-center justify-center transition-all bg-slate-800 text-slate-500 hover:bg-emerald-500/20 hover:text-emerald-400 border border-transparent hover:border-emerald-500/30 group"
+                    >
+                      {isPending && completingId === item.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Clock className="w-4 h-4 group-hover:hidden" />
+                      )}
+                      {!isPending && completingId !== item.id && (
+                        <CheckCircle2 className="w-4 h-4 hidden group-hover:block" />
+                      )}
+                    </button>
+                  )}
 
                   {/* Icon Indicator */}
                   <div className="p-2.5 rounded-xl bg-slate-800 text-slate-300 shadow-inner">

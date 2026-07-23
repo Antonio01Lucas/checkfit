@@ -111,3 +111,35 @@ export async function deleteRoutine(id: string): Promise<{ success: boolean; err
   revalidatePath('/dashboard/routine')
   return { success: true }
 }
+
+/**
+ * Marca uma rotina agendada como concluída para o dia atual.
+ */
+export async function completeScheduledRoutine(routineId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { success: false, error: 'Usuário não autenticado' }
+
+  const today = new Date()
+  const todayString = today.toISOString().split('T')[0] // YYYY-MM-DD
+
+  const { error } = await supabase
+    .from('routine_completions')
+    .insert({
+      user_id: user.id,
+      routine_id: routineId,
+      completed_date: todayString
+    })
+
+  if (error) {
+    console.error('Erro ao concluir rotina:', error)
+    if (error.code === '23505') {
+      return { success: false, error: 'Esta atividade já foi concluída hoje.' }
+    }
+    return { success: false, error: 'Falha ao registrar conclusão' }
+  }
+
+  revalidatePath('/dashboard')
+  return { success: true }
+}

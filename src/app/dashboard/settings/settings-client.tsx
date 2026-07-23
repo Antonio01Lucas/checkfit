@@ -189,7 +189,7 @@ export function SettingsClient({ initialProfile }: SettingsClientProps) {
                 <label className="text-sm font-semibold text-slate-300">Provedor de IA</label>
                 <select
                   value={aiProvider || ''}
-                  onChange={(e) => setAiProvider(e.target.value ? (e.target.value as any) : null)}
+                  onChange={(e) => setAiProvider(e.target.value ? (e.target.value as 'openai' | 'gemini' | 'anthropic') : null)}
                   className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
                 >
                   <option value="">Usar IA Nativa do App (Gratuito)</option>

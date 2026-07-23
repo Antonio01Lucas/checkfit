@@ -3,13 +3,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+import type { RoutineCategory } from '@/types/database'
+
 export type RoutineItem = {
   id: string
-  type: 'workout' | 'meal'
+  type: RoutineCategory
   title: string
   details: string
   time: string
   loggedAt: string
+  routine_id?: string
 }
 
 /**
@@ -42,6 +45,31 @@ export async function getTodayRoutine(): Promise<RoutineItem[]> {
     .gte('logged_at', today.toISOString())
     .lt('logged_at', tomorrow.toISOString())
 
+  // Fetch Hydration
+  const { data: hydration } = await supabase
+    .from('hydration_logs')
+    .select('*')
+    .eq('user_id', user.id)
+    .gte('logged_at', today.toISOString())
+    .lt('logged_at', tomorrow.toISOString())
+
+  // Fetch Routine Completions
+  const todayString = today.toISOString().split('T')[0]
+  const { data: completions } = await supabase
+    .from('routine_completions')
+    .select(`
+      id,
+      completed_at,
+      routine_id,
+      routines (
+        title,
+        category,
+        description
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('completed_date', todayString)
+
   const routineItems: RoutineItem[] = []
 
   if (workouts) {
@@ -68,6 +96,36 @@ export async function getTodayRoutine(): Promise<RoutineItem[]> {
         details: `${m.calories || 0} kcal`,
         time: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         loggedAt: m.logged_at
+      })
+    })
+  }
+
+  if (hydration) {
+    hydration.forEach(h => {
+      const date = new Date(h.logged_at)
+      routineItems.push({
+        id: h.id,
+        type: 'hydration',
+        title: 'Água',
+        details: `${h.amount_ml || 0} ml`,
+        time: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        loggedAt: h.logged_at
+      })
+    })
+  }
+
+  if (completions) {
+    completions.forEach((c: any) => {
+      const date = new Date(c.completed_at)
+      const routine = c.routines || {}
+      routineItems.push({
+        id: c.id,
+        routine_id: c.routine_id,
+        type: routine.category || 'habit',
+        title: routine.title || 'Hábito Concluído',
+        details: routine.description || 'Concluído no Dashboard',
+        time: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        loggedAt: c.completed_at
       })
     })
   }
