@@ -2,9 +2,12 @@
 
 import { Bell, Droplets, User, Calendar } from 'lucide-react'
 
+import type { Profile } from '@/types/database'
+
 interface HeaderProps {
   title?: string
   description?: string
+  profile?: Profile | null
 }
 
 /**
@@ -13,7 +16,8 @@ interface HeaderProps {
  */
 export function Header({ 
   title = 'Dashboard', 
-  description = 'Bem-vindo de volta! Confira seu progresso e rotina de hoje.' 
+  description = 'Bem-vindo de volta! Confira seu progresso e rotina de hoje.',
+  profile
 }: HeaderProps) {
   // Formatação de data em português (Ex: "Quinta-feira, 23 de Julho")
   const todayFormatted = new Intl.DateTimeFormat('pt-BR', {
@@ -58,8 +62,20 @@ export function Header({
 
         {/* Perfil do Usuário */}
         <div className="flex items-center gap-3 pl-2 border-l border-slate-800">
-          <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700/60 flex items-center justify-center text-slate-300 font-bold text-sm shadow-inner">
-            <User className="w-5 h-5 text-slate-400" />
+          <div className="flex items-center gap-2">
+            <div className="hidden md:block text-right">
+              <p className="text-sm font-semibold text-slate-200">{profile?.full_name || 'Usuário'}</p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700/60 flex items-center justify-center text-slate-300 font-bold text-sm shadow-inner overflow-hidden">
+              {profile?.avatar_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={profile.avatar_url} alt={profile.full_name || 'Avatar'} className="w-full h-full object-cover" />
+              ) : profile?.full_name ? (
+                <span>{profile.full_name.charAt(0).toUpperCase()}</span>
+              ) : (
+                <User className="w-5 h-5 text-slate-400" />
+              )}
+            </div>
           </div>
         </div>
       </div>
