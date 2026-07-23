@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import DashboardClient from './dashboard-client'
 import { getDailyHydration } from '@/app/actions/hydration'
+import { getTodayRoutine } from '@/app/actions/routine'
 import type { Profile } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
@@ -16,17 +17,24 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  // Fetch user profile and daily hydration in parallel for performance
-  const [profileResponse, initialWaterIntake] = await Promise.all([
+  // Fetch user profile, daily hydration and routine in parallel for performance
+  const [profileResponse, initialWaterIntake, initialRoutineItems] = await Promise.all([
     supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single(),
-    getDailyHydration()
+    getDailyHydration(),
+    getTodayRoutine()
   ])
 
   const profile: Profile | null = profileResponse.error ? null : profileResponse.data
 
-  return <DashboardClient profile={profile} initialWaterIntake={initialWaterIntake} />
+  return (
+    <DashboardClient 
+      profile={profile} 
+      initialWaterIntake={initialWaterIntake} 
+      initialRoutineItems={initialRoutineItems}
+    />
+  )
 }

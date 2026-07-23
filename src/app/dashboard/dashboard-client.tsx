@@ -3,16 +3,14 @@
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { WaterTracker } from '@/components/dashboard/water-tracker'
+import { RoutineTimeline } from '@/components/dashboard/routine-timeline'
+import { type RoutineItem } from '@/app/actions/routine'
 import { 
   Sparkles, 
-  Droplets, 
   Dumbbell, 
-  Utensils, 
-  CheckCircle2, 
   Calendar, 
-  Plus, 
-  Flame,
-  ChevronRight
+  ChevronRight,
+  Flame
 } from 'lucide-react'
 
 import type { Profile } from '@/types/database'
@@ -23,54 +21,13 @@ import type { Profile } from '@/types/database'
  */
 export default function DashboardClient({ 
   profile,
-  initialWaterIntake 
+  initialWaterIntake,
+  initialRoutineItems
 }: { 
   profile: Profile | null,
-  initialWaterIntake: number
+  initialWaterIntake: number,
+  initialRoutineItems: RoutineItem[]
 }) {
-  // Lista simulada de itens da rotina diária
-  const todayRoutine = [
-    {
-      id: '1',
-      time: '07:30',
-      title: 'Café da Manhã Nutritivo',
-      category: 'meal',
-      completed: true,
-      details: 'Ovos mexidos, aveia e banana',
-    },
-    {
-      id: '2',
-      time: '09:00',
-      title: 'Lembrete de Hidratação 500ml',
-      category: 'hydration',
-      completed: true,
-      details: 'Meta parcial da manhã atingida',
-    },
-    {
-      id: '3',
-      time: '11:00',
-      title: 'Treino de Musculação - Peito e Tríceps',
-      category: 'workout',
-      completed: false,
-      details: '45 minutos de treino agendado no Google Calendar',
-    },
-    {
-      id: '4',
-      time: '13:00',
-      title: 'Almoço Balanceado',
-      category: 'meal',
-      completed: false,
-      details: 'Frango grelhado, arroz integral e salada verde',
-    },
-    {
-      id: '5',
-      time: '17:30',
-      title: 'Caminhada de Descompressão',
-      category: 'workout',
-      completed: false,
-      details: 'Sincronizado com Google Tasks',
-    },
-  ]
 
   return (
     <div className="min-h-screen bg-[#090d16] flex">
@@ -162,63 +119,7 @@ export default function DashboardClient({
           </div>
 
           {/* Cronograma da Rotina Diária */}
-          <div className="glass-panel p-6 rounded-3xl">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-100">Cronograma de Hoje</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Acompanhe seus horários planejados de comer, treinar e beber água.</p>
-              </div>
-              <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-all shadow-md shadow-emerald-500/20">
-                <Plus className="w-4 h-4 stroke-3" />
-                <span>Nova Tarefa</span>
-              </button>
-            </div>
-
-            {/* Lista de Itens da Rotina */}
-            <div className="space-y-3">
-              {todayRoutine.map((item) => (
-                <div 
-                  key={item.id}
-                  className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                    item.completed 
-                      ? 'bg-slate-900/40 border-slate-800/60 opacity-75' 
-                      : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Checkbox de Conclusão */}
-                    <button 
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
-                        item.completed 
-                          ? 'bg-emerald-500 text-slate-950' 
-                          : 'border-2 border-slate-700 text-transparent hover:border-emerald-500'
-                      }`}
-                    >
-                      <CheckCircle2 className="w-4 h-4 stroke-3" />
-                    </button>
-
-                    {/* Ícone por Categoria */}
-                    <div className="p-2.5 rounded-xl bg-slate-800 text-slate-300">
-                      {item.category === 'meal' && <Utensils className="w-4 h-4 text-orange-400" />}
-                      {item.category === 'workout' && <Dumbbell className="w-4 h-4 text-emerald-400" />}
-                      {item.category === 'hydration' && <Droplets className="w-4 h-4 text-cyan-400" />}
-                    </div>
-
-                    <div>
-                      <h4 className={`text-sm font-semibold ${item.completed ? 'line-through text-slate-400' : 'text-slate-100'}`}>
-                        {item.title}
-                      </h4>
-                      <p className="text-xs text-slate-400 mt-0.5">{item.details}</p>
-                    </div>
-                  </div>
-
-                  <span className="text-xs font-bold text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/50">
-                    {item.time}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <RoutineTimeline initialItems={initialRoutineItems} />
         </main>
       </div>
     </div>

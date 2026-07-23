@@ -1,0 +1,184 @@
+'use client'
+
+import { useState, useTransition, useOptimistic } from 'react'
+import { Plus, Dumbbell, Utensils, CheckCircle2, X } from 'lucide-react'
+import { type RoutineItem, logWorkout, logMeal } from '@/app/actions/routine'
+
+interface RoutineTimelineProps {
+  initialItems: RoutineItem[]
+}
+
+export function RoutineTimeline({ initialItems }: RoutineTimelineProps) {
+  const [isPending, startTransition] = useTransition()
+  
+  const [optimisticItems, addOptimisticItem] = useOptimistic(
+    initialItems,
+    (state: RoutineItem[], newItem: RoutineItem) => {
+      const updated = [...state, newItem]
+      return updated.sort((a, b) => new Date(a.loggedAt).getTime() - new Date(b.loggedAt).getTime())
+    }
+  )
+
+  const [isAddingMode, setIsAddingMode] = useState<'none' | 'workout' | 'meal'>('none')
+  
+  // States para o form
+  const [name, setName] = useState('')
+  const [calories, setCalories] = useState('')
+  const [duration, setDuration] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name) return
+
+    const now = new Date()
+    
+    // Criar item otimista falso
+    const newItem: RoutineItem = {
+      id: Math.random().toString(),
+      type: isAddingMode as 'workout' | 'meal',
+      title: name,
+      details: isAddingMode === 'workout' 
+        ? `${duration || 0} min • ${calories || 0} kcal` 
+        : `${calories || 0} kcal`,
+      time: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      loggedAt: now.toISOString()
+    }
+
+    startTransition(async () => {
+      addOptimisticItem(newItem)
+      setIsAddingMode('none')
+      setName('')
+      setCalories('')
+      setDuration('')
+
+      try {
+        if (newItem.type === 'workout') {
+          await logWorkout(newItem.title, Number(duration) || 0, Number(calories) || 0)
+        } else {
+          await logMeal(newItem.title, Number(calories) || 0)
+        }
+      } catch (error) {
+        console.error('Falha ao adicionar item à rotina:', error)
+        alert('Falha ao salvar registro.')
+      }
+    })
+  }
+
+  return (
+    <div className="glass-panel p-6 rounded-3xl">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-lg font-bold text-slate-100">Atividades Concluídas Hoje</h3>
+          <p className="text-xs text-slate-400 mt-0.5">Treinos e refeições registrados ao longo do dia.</p>
+        </div>
+        
+        {isAddingMode === 'none' ? (
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setIsAddingMode('meal')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-500/20 text-orange-400 font-bold text-xs hover:bg-orange-500/30 transition-all border border-orange-500/30"
+            >
+              <Utensils className="w-3.5 h-3.5" /> + Refeição
+            </button>
+            <button 
+              onClick={() => setIsAddingMode('workout')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 font-bold text-xs hover:bg-emerald-500/30 transition-all border border-emerald-500/30"
+            >
+              <Dumbbell className="w-3.5 h-3.5" /> + Treino
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={() => setIsAddingMode('none')}
+            className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-all"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {isAddingMode !== 'none' && (
+        <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-2xl border border-slate-700 bg-slate-800/50 flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-200 mb-1">
+            {isAddingMode === 'workout' ? <Dumbbell className="w-4 h-4 text-emerald-400"/> : <Utensils className="w-4 h-4 text-orange-400"/>}
+            Novo {isAddingMode === 'workout' ? 'Treino' : 'Refeição'}
+          </div>
+          
+          <input 
+            type="text" 
+            placeholder={isAddingMode === 'workout' ? "Nome (ex: Musculação)" : "Nome (ex: Almoço)"}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+            required
+          />
+          
+          <div className="flex gap-3">
+            {isAddingMode === 'workout' && (
+              <input 
+                type="number" 
+                placeholder="Duração (min)"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="w-1/2 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+              />
+            )}
+            <input 
+              type="number" 
+              placeholder="Calorias"
+              value={calories}
+              onChange={(e) => setCalories(e.target.value)}
+              className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+            />
+          </div>
+          
+          <button 
+            type="submit" 
+            disabled={isPending || !name}
+            className="mt-2 w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm transition-all disabled:opacity-50"
+          >
+            {isPending ? 'Salvando...' : 'Salvar Registro'}
+          </button>
+        </form>
+      )}
+
+      {/* Lista de Itens da Rotina */}
+      <div className="space-y-3">
+        {optimisticItems.length === 0 && (
+          <p className="text-center text-slate-500 text-sm py-4">Nenhuma atividade registrada hoje.</p>
+        )}
+        
+        {optimisticItems.map((item) => (
+          <div 
+            key={item.id}
+            className="flex items-center justify-between p-4 rounded-2xl border transition-all bg-slate-900/40 border-slate-800/60"
+          >
+            <div className="flex items-center gap-4">
+              {/* Checkbox de Conclusão (Fixo verde pois já está concluído) */}
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center transition-all bg-emerald-500/20 text-emerald-400">
+                <CheckCircle2 className="w-4 h-4 stroke-3" />
+              </div>
+
+              {/* Ícone por Categoria */}
+              <div className="p-2.5 rounded-xl bg-slate-800 text-slate-300 shadow-inner">
+                {item.type === 'meal' && <Utensils className="w-4 h-4 text-orange-400" />}
+                {item.type === 'workout' && <Dumbbell className="w-4 h-4 text-emerald-400" />}
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-slate-100">
+                  {item.title}
+                </h4>
+                <p className="text-xs text-slate-400 mt-0.5">{item.details}</p>
+              </div>
+            </div>
+
+            <span className="text-xs font-bold text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/50 shadow-inner">
+              {item.time}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
