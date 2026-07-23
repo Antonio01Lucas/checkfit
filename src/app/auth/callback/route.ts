@@ -12,9 +12,21 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
-    if (!error) {
+    if (!error && data?.session) {
+      // Se tiver provider_token, salva no profile do usuário (Google Calendar/Tasks)
+      if (data.session.provider_token) {
+        await supabase
+          .from('profiles')
+          .update({
+            google_access_token: data.session.provider_token,
+            google_refresh_token: data.session.provider_refresh_token || null,
+            google_calendar_connected: true
+          })
+          .eq('id', data.session.user.id)
+      }
+
       // Redireciona o usuário autenticado para a tela principal (Dashboard)
       return NextResponse.redirect(`${origin}/dashboard`)
     }

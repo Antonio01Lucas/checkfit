@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/header'
 import { WaterTracker } from '@/components/dashboard/water-tracker'
 import { RoutineTimeline } from '@/components/dashboard/routine-timeline'
 import { AIBanner } from '@/components/dashboard/ai-banner'
+import { CalendarWidget } from '@/components/dashboard/calendar-widget'
 import { type RoutineItem } from '@/app/actions/routine'
 import { 
   Dumbbell, 
@@ -74,26 +75,8 @@ export default function DashboardClient({
               </div>
             </div>
 
-            {/* Card de Integração Google Workspace */}
-            <div className="glass-panel p-5 rounded-2xl">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2 text-purple-400 font-semibold text-sm">
-                  <Calendar className="w-5 h-5" />
-                  <span>Google Workspace</span>
-                </div>
-                <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                  Conectado
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Seus horários de treino e refeições estão sincronizados com seu <strong>Google Calendar</strong> e <strong>Google Tasks</strong>.
-              </p>
-
-              <button className="w-full mt-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-slate-200 font-medium text-xs border border-slate-700/60 transition-all">
-                Gerenciar Sincronização
-              </button>
-            </div>
+            {/* Integração Google Calendar */}
+            <CalendarWidget />
           </div>
 
           {/* Cronograma da Rotina Diária */}
