@@ -44,8 +44,9 @@ export default function LoginPage() {
           text: 'Cadastro realizado com sucesso! Verifique seu e-mail para confirmar a conta.',
         })
       }
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Ocorreu um erro na autenticação.' })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Ocorreu um erro na autenticação.'
+      setMessage({ type: 'error', text: message })
     } finally {
       setLoading(false)
     }
@@ -77,7 +78,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md glass-panel p-8 rounded-3xl relative z-10 border border-slate-800 shadow-2xl">
         {/* Cabeçalho do Card */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
+          <div className="w-14 h-14 rounded-2xl bg-linear-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
             <Activity className="w-8 h-8 text-slate-950 stroke-[2.5]" />
           </div>
           <h1 className="text-2xl font-bold text-slate-100 tracking-tight">
@@ -153,7 +154,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold text-sm hover:opacity-95 transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 mt-6 disabled:opacity-50"
+            className="w-full py-3 px-4 rounded-xl bg-linear-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold text-sm hover:opacity-95 transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 mt-6 disabled:opacity-50"
           >
             <span>{loading ? 'Processando...' : isLogin ? 'Entrar na Conta' : 'Criar Conta'}</span>
             <ArrowRight className="w-4 h-4 stroke-[2.5]" />

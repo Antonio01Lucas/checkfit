@@ -35,7 +35,7 @@ export function Sidebar() {
       <div>
         {/* Logo do CheckFit */}
         <div className="flex items-center gap-3 px-3 py-4 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <Activity className="w-6 h-6 text-slate-950 stroke-[2.5]" />
           </div>
           <div>

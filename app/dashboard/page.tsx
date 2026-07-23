@@ -91,7 +91,7 @@ export default function DashboardPage() {
 
         <main className="flex-1 p-6 space-y-6 overflow-y-auto">
           {/* Banner de Boas-Vindas com Sugestão de IA */}
-          <div className="glass-panel p-6 rounded-3xl bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-purple-950/30 border border-purple-500/20 relative overflow-hidden">
+          <div className="glass-panel p-6 rounded-3xl bg-linear-to-r from-slate-900/90 via-slate-900/60 to-purple-950/30 border border-purple-500/20 relative overflow-hidden">
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold w-fit mb-3">
@@ -136,7 +136,7 @@ export default function DashboardPage() {
               {/* Barra de Progresso */}
               <div className="w-full bg-slate-800 rounded-full h-2.5 mt-3 overflow-hidden">
                 <div 
-                  className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full rounded-full transition-all duration-500"
+                  className="bg-linear-to-r from-cyan-500 to-blue-500 h-full rounded-full transition-all duration-500"
                   style={{ width: `${waterPercentage}%` }}
                 ></div>
               </div>
@@ -211,7 +211,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-slate-400 mt-0.5">Acompanhe seus horários planejados de comer, treinar e beber água.</p>
               </div>
               <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-all shadow-md shadow-emerald-500/20">
-                <Plus className="w-4 h-4 stroke-[3]" />
+                <Plus className="w-4 h-4 stroke-3" />
                 <span>Nova Tarefa</span>
               </button>
             </div>
@@ -236,7 +236,7 @@ export default function DashboardPage() {
                           : 'border-2 border-slate-700 text-transparent hover:border-emerald-500'
                       }`}
                     >
-                      <CheckCircle2 className="w-4 h-4 stroke-[3]" />
+                      <CheckCircle2 className="w-4 h-4 stroke-3" />
                     </button>
 
                     {/* Ícone por Categoria */}
