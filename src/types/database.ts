@@ -13,6 +13,8 @@ export interface Profile {
   daily_calorie_target: number
   google_calendar_connected: boolean
   google_tasks_connected: boolean
+  ai_provider: 'openai' | 'gemini' | 'anthropic' | null
+  ai_api_key: string | null
   created_at: string
   updated_at: string
 }
@@ -27,10 +29,18 @@ export interface RoutineItem {
   title: string
   category: RoutineCategory
   scheduled_time: string
-  description?: string | null
+  description: string | null
   is_active: boolean
-  google_event_id?: string | null
+  google_event_id?: string
   created_at: string
+}
+
+export interface RoutineCompletion {
+  id: string
+  user_id: string
+  routine_id: string
+  completed_date: string // YYYY-MM-DD
+  completed_at: string
 }
 
 /** Registro de ingestão de água */

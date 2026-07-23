@@ -8,6 +8,7 @@ export type GoogleEvent = {
   start: { dateTime?: string; date?: string }
   end: { dateTime?: string; date?: string }
   htmlLink: string
+  status?: string
 }
 
 /**
@@ -69,13 +70,13 @@ export async function getTodayCalendarEvents(): Promise<{ events: GoogleEvent[],
     
     // Imprimir detalhes dos eventos encontrados para debug
     if (data.items?.length > 0) {
-      data.items.forEach((ev: any) => {
+      data.items.forEach((ev: GoogleEvent) => {
         console.log(`- Evento: "${ev.summary}" | Status: ${ev.status} | Início: ${ev.start?.dateTime || ev.start?.date}`)
       })
     }
 
     // Filtrar eventos cancelados
-    const validEvents = (data.items || []).filter((ev: any) => ev.status !== 'cancelled')
+    const validEvents = (data.items || []).filter((ev: GoogleEvent) => ev.status !== 'cancelled')
     
     return { events: validEvents, error: null }
   } catch (error) {
