@@ -6,11 +6,10 @@ import { addWaterIntake } from '@/app/actions/hydration'
 
 interface WaterTrackerProps {
   initialWaterIntake: number
+  waterTarget?: number
 }
 
-export function WaterTracker({ initialWaterIntake }: WaterTrackerProps) {
-  const waterTarget = 2500 // Exemplo de meta de hidratação
-  
+export function WaterTracker({ initialWaterIntake, waterTarget = 2500 }: WaterTrackerProps) {
   // hook useOptimistic permite atualizar a UI instantaneamente
   const [optimisticWaterIntake, addOptimisticWater] = useOptimistic(
     initialWaterIntake,

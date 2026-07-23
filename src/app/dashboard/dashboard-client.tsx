@@ -50,7 +50,10 @@ export default function DashboardClient({
           {/* Grid de Cards de Estatísticas e Metas */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card de Hidratação Interativa */}
-            <WaterTracker initialWaterIntake={initialWaterIntake} />
+            <WaterTracker 
+              initialWaterIntake={initialWaterIntake} 
+              waterTarget={profile?.daily_water_target_ml}
+            />
 
             {/* Card de Exercícios do Dia */}
             <div className="glass-panel p-5 rounded-2xl">
@@ -71,7 +74,10 @@ export default function DashboardClient({
 
               <div className="flex items-center gap-2 mt-6 text-xs text-slate-300">
                 <Flame className="w-4 h-4 text-orange-400" />
-                <span>Estimativa de <strong className="text-orange-400">320 kcal</strong> queimadas</span>
+                <span>
+                  Estimativa de <strong className="text-orange-400">320 kcal</strong> queimadas 
+                  (Meta: {profile?.daily_calorie_target || 2000} kcal)
+                </span>
               </div>
             </div>
 

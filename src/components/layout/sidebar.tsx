@@ -27,7 +27,7 @@ export function Sidebar() {
     { name: 'Nutrição & Água', href: '/nutrition', icon: Utensils },
     { name: 'Exercícios', href: '/workouts', icon: Dumbbell },
     { name: 'Integrações Google', href: '/integrations', icon: Share2 },
-    { name: 'Configurações', href: '/settings', icon: Settings },
+    { name: 'Configurações', href: '/dashboard/settings', icon: Settings },
   ]
 
   return (
