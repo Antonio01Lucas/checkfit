@@ -1,38 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { CheckSquare, Link as LinkIcon, RefreshCw, Plus, Clock } from 'lucide-react'
-import { getGoogleTasks, type GoogleTask } from '@/app/actions/tasks'
+import { CheckSquare, Link as LinkIcon, RefreshCw, Plus, Clock, Loader2 } from 'lucide-react'
+import { type GoogleTask } from '@/app/actions/tasks'
 import { createClient } from '@/lib/supabase/client'
 
-export function TasksWidget() {
-  const [tasks, setTasks] = useState<GoogleTask[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface TasksWidgetProps {
+  tasks: GoogleTask[]
+  loading: boolean
+  error: string | null
+  completingTask: string | null
+  onCompleteTask: (taskId: string) => void
+}
 
-  useEffect(() => {
-    let isMounted = true
+export function TasksWidget({ tasks, loading, error, completingTask, onCompleteTask }: TasksWidgetProps) {
 
-    async function fetchTasks() {
-      const { tasks: fetchedTasks, error: fetchError } = await getGoogleTasks()
-      
-      if (isMounted) {
-        if (fetchError) {
-          setError(fetchError)
-        } else {
-          setTasks(fetchedTasks)
-          setError(null)
-        }
-        setLoading(false)
-      }
-    }
-
-    fetchTasks()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
+  // O fetch e state foram elevados para o DashboardClient
 
   const handleConnectGoogle = async () => {
     const supabase = createClient()
@@ -43,6 +25,11 @@ export function TasksWidget() {
         scopes: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks',
       },
     })
+  }
+
+  const handleCompleteTaskClick = (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    onCompleteTask(taskId)
   }
 
   // Função auxiliar para formatar a data de vencimento
@@ -113,9 +100,14 @@ export function TasksWidget() {
               <div 
                 key={task.id}
                 className="group flex items-start gap-4 p-4 rounded-2xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 transition-all cursor-pointer"
+                onClick={(e) => handleCompleteTaskClick(task.id, e)}
               >
                 <div className="mt-1">
-                  <div className="w-5 h-5 rounded-md border-2 border-slate-500 group-hover:border-purple-400 transition-colors"></div>
+                  {completingTask === task.id ? (
+                    <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-md border-2 border-slate-500 group-hover:border-purple-400 group-hover:bg-purple-500/20 transition-all"></div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-semibold text-slate-200 group-hover:text-purple-400 transition-colors leading-snug">

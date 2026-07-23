@@ -66,3 +66,60 @@ export async function getGoogleTasks(): Promise<{ tasks: GoogleTask[], error: st
     return { tasks: [], error: 'Erro de conexão com Google' }
   }
 }
+
+/**
+ * Marca uma tarefa do Google Tasks como concluída
+ */
+export async function completeGoogleTask(taskId: string): Promise<{ success: boolean; error: string | null }> {
+  const supabase = await createClient()
+
+  // 1. Verificar o usuário logado
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Usuário não autenticado' }
+
+  // 2. Buscar token no banco
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('google_access_token')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.google_access_token) {
+    return { success: false, error: 'not_connected' }
+  }
+
+  const accessToken = profile.google_access_token
+
+  try {
+    const url = `https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/${taskId}`
+    console.log('Completando tarefa no Google:', url)
+
+    // Precisamos buscar a tarefa primeiro para conseguir fazer o patch
+    // (O PATCH requer o ID da tarefa)
+    // Mas de acordo com a documentação do Google Tasks API, 
+    // podemos apenas dar um POST/PATCH com o status 'completed'.
+    // Mas na verdade, é recomendado enviar o status diretamente via PATCH.
+    
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: 'completed'
+      })
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      console.error('Google Tasks API Error na conclusão:', errorBody)
+      return { success: false, error: `Erro na API: ${response.status}` }
+    }
+
+    return { success: true, error: null }
+  } catch (error) {
+    console.error('Erro ao completar tarefa:', error)
+    return { success: false, error: 'Erro de conexão com Google' }
+  }
+}

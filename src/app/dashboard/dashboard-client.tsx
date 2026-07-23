@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { WaterTracker } from '@/components/dashboard/water-tracker'
@@ -8,7 +9,8 @@ import { AIBanner } from '@/components/dashboard/ai-banner'
 import { CalendarWidget } from '@/components/dashboard/calendar-widget'
 import { TasksWidget } from '@/components/dashboard/tasks-widget'
 import { type RoutineItem } from '@/app/actions/routine'
-import type { RoutineItem as DBScheduledRoutine, RoutineCategory } from '@/types/database'
+import { getGoogleTasks, completeGoogleTask, type GoogleTask } from '@/app/actions/tasks'
+import type { RoutineItem as DBScheduledRoutine } from '@/types/database'
 import { 
   Dumbbell, 
   Flame,
@@ -17,6 +19,7 @@ import {
   Droplets,
   Sparkles,
   CheckCircle2,
+  CheckSquare,
   type LucideIcon
 } from 'lucide-react'
 
@@ -38,26 +41,78 @@ export default function DashboardClient({
   scheduledRoutines: DBScheduledRoutine[]
 }) {
 
-  // Function to get the next habit based on current time
-  const getNextHabit = () => {
-    if (!scheduledRoutines.length) return null
+  const [tasks, setTasks] = useState<GoogleTask[]>([])
+  const [tasksLoading, setTasksLoading] = useState(true)
+  const [tasksError, setTasksError] = useState<string | null>(null)
+  const [completingTask, setCompletingTask] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+    async function fetchTasks() {
+      const { tasks: fetchedTasks, error: fetchError } = await getGoogleTasks()
+      if (isMounted) {
+        if (fetchError) setTasksError(fetchError)
+        else setTasks(fetchedTasks)
+        setTasksLoading(false)
+      }
+    }
+    fetchTasks()
+    return () => { isMounted = false }
+  }, [])
+
+  const handleCompleteGoogleTask = async (taskId: string) => {
+    if (completingTask) return
+    setCompletingTask(taskId)
+    
+    // Atualização otimista
+    const taskBackup = tasks.find(t => t.id === taskId)
+    setTasks(prev => prev.filter(t => t.id !== taskId))
+    
+    const { success, error: completeError } = await completeGoogleTask(taskId)
+    
+    if (!success) {
+      console.error('Falha ao concluir tarefa:', completeError)
+      if (taskBackup) {
+        setTasks(prev => [...prev, taskBackup])
+      }
+    }
+    setCompletingTask(null)
+  }
+
+  // Function to get the next steps based on current time
+  const getNextSteps = () => {
     const now = new Date()
     const currentTimeString = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
     
-    // Find the first routine that is scheduled after the current time
-    const next = scheduledRoutines.find(r => r.scheduled_time >= currentTimeString)
+    // Find routines that are scheduled after the current time
+    const upcomingRoutines = scheduledRoutines
+      .filter(r => r.scheduled_time >= currentTimeString)
+      .map(r => ({ ...r, category: r.category as string }))
     
-    // If all routines for today have passed, maybe show the first one for tomorrow
-    return next || null
+    // Pegamos todas as tarefas pendentes
+    const upcomingTasks = tasks.map(t => ({
+      id: t.id,
+      category: 'task',
+      title: t.title || '(Sem título)',
+      description: t.notes || 'Google Task',
+      scheduled_time: '23:59:59'
+    }))
+
+    // Combinamos rotinas primeiro (ordenadas por horário) e depois as tarefas
+    const combined = [...upcomingRoutines, ...upcomingTasks]
+    
+    // Retornamos até 3 passos
+    return combined.slice(0, 3)
   }
 
-  const nextHabit = getNextHabit()
+  const nextSteps = getNextSteps()
 
-  const categoryConfig: Record<RoutineCategory, { icon: LucideIcon; color: string; bg: string; label: string }> = {
+  const categoryConfig: Record<string, { icon: LucideIcon; color: string; bg: string; label: string }> = {
     workout: { icon: Dumbbell, color: 'text-emerald-400', bg: 'bg-emerald-500/10', label: 'Treino' },
     meal: { icon: Utensils, color: 'text-orange-400', bg: 'bg-orange-500/10', label: 'Refeição' },
     hydration: { icon: Droplets, color: 'text-cyan-400', bg: 'bg-cyan-500/10', label: 'Água' },
     habit: { icon: Sparkles, color: 'text-purple-400', bg: 'bg-purple-500/10', label: 'Hábito' },
+    task: { icon: CheckSquare, color: 'text-purple-400', bg: 'bg-purple-500/10', label: 'Tarefa' }
   }
 
   return (
@@ -86,42 +141,50 @@ export default function DashboardClient({
               waterTarget={profile?.daily_water_target_ml}
             />
 
-            {/* Card de Próximo Hábito */}
+            {/* Card de Próximos Passos */}
             <div className="glass-panel p-5 rounded-2xl flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-4 border-b border-slate-700/50 pb-3">
                   <div className="flex items-center gap-2 text-slate-300 font-semibold text-sm">
                     <Clock className="w-5 h-5 text-blue-400" />
-                    <span>Próximo Hábito</span>
+                    <span>Próximos Passos</span>
                   </div>
-                  {nextHabit && (
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg border ${categoryConfig[nextHabit.category].color} ${categoryConfig[nextHabit.category].bg} border-current/20`}>
-                      {nextHabit.scheduled_time.substring(0, 5)}
-                    </span>
-                  )}
                 </div>
 
-                <div className="mt-2">
-                  {nextHabit ? (
-                    <>
-                      <h3 className="text-base font-bold text-slate-100">{nextHabit.title}</h3>
-                      <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                        {categoryConfig[nextHabit.category].label}
-                        {nextHabit.description && ` • ${nextHabit.description}`}
-                      </p>
-                    </>
+                <div className="space-y-3 mt-4">
+                  {nextSteps.length > 0 ? (
+                    nextSteps.map((step) => (
+                      <div key={step.id} className="flex justify-between items-center p-4 rounded-2xl bg-slate-800/40 border border-slate-700/50">
+                        <div className="pr-3">
+                          <h3 className="text-sm font-bold text-slate-100 line-clamp-1">{step.title}</h3>
+                          <p className="text-xs text-slate-400 mt-1 flex items-center gap-1 line-clamp-1">
+                            {categoryConfig[step.category]?.label}
+                            {step.description && ` • ${step.description}`}
+                          </p>
+                        </div>
+                        {step.category !== 'task' ? (
+                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${categoryConfig[step.category]?.color} ${categoryConfig[step.category]?.bg} border-current/20 whitespace-nowrap`}>
+                            {step.scheduled_time.substring(0, 5)}
+                          </span>
+                        ) : (
+                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${categoryConfig.task.color} ${categoryConfig.task.bg} border-current/20 whitespace-nowrap`}>
+                            Pendente
+                          </span>
+                        )}
+                      </div>
+                    ))
                   ) : (
                     <div className="flex flex-col items-center justify-center py-4 text-center">
                       <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
                       <h3 className="text-sm font-bold text-slate-200">Tudo concluído!</h3>
-                      <p className="text-xs text-slate-500">Você não tem mais hábitos agendados para hoje.</p>
+                      <p className="text-xs text-slate-500 mt-1">Você não tem mais atividades pendentes para hoje.</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {nextHabit?.category === 'workout' && (
-                <div className="flex items-center gap-2 mt-4 text-xs text-slate-300">
+              {nextSteps.some(s => s.category === 'workout') && (
+                <div className="flex items-center gap-2 mt-5 text-xs text-slate-300 border-t border-slate-700/50 pt-3">
                   <Flame className="w-4 h-4 text-orange-400" />
                   <span>
                     Meta de queima: <strong className="text-orange-400">{profile?.daily_calorie_target || 2000} kcal</strong> diárias
@@ -134,11 +197,23 @@ export default function DashboardClient({
             <CalendarWidget />
 
             {/* Integração Google Tasks */}
-            <TasksWidget />
+            <TasksWidget 
+              tasks={tasks}
+              loading={tasksLoading}
+              error={tasksError}
+              completingTask={completingTask}
+              onCompleteTask={handleCompleteGoogleTask}
+            />
           </div>
 
           {/* Cronograma da Rotina Diária */}
-          <RoutineTimeline initialItems={initialRoutineItems} scheduledRoutines={scheduledRoutines} />
+          <RoutineTimeline 
+            initialItems={initialRoutineItems} 
+            scheduledRoutines={scheduledRoutines} 
+            googleTasks={tasks}
+            completingGoogleTask={completingTask}
+            onCompleteGoogleTask={handleCompleteGoogleTask}
+          />
         </main>
       </div>
     </div>

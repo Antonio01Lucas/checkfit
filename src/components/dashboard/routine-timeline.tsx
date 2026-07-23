@@ -1,17 +1,21 @@
 'use client'
 
 import { useState, useTransition, useOptimistic } from 'react'
-import { Dumbbell, Utensils, CheckCircle2, X, Clock, Droplets, Sparkles, Loader2 } from 'lucide-react'
+import { Dumbbell, Utensils, CheckCircle2, X, Clock, Droplets, Sparkles, Loader2, CheckSquare } from 'lucide-react'
 import { type RoutineItem, logWorkout, logMeal } from '@/app/actions/routine'
 import { completeScheduledRoutine } from '@/app/actions/scheduled-routines'
 import type { RoutineItem as DBScheduledRoutine } from '@/types/database'
+import type { GoogleTask } from '@/app/actions/tasks'
 
 interface RoutineTimelineProps {
   initialItems: RoutineItem[]
   scheduledRoutines?: DBScheduledRoutine[]
+  googleTasks?: GoogleTask[]
+  completingGoogleTask?: string | null
+  onCompleteGoogleTask?: (taskId: string) => void
 }
 
-export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: RoutineTimelineProps) {
+export function RoutineTimeline({ initialItems, scheduledRoutines = [], googleTasks = [], completingGoogleTask, onCompleteGoogleTask }: RoutineTimelineProps) {
   const [isPending, startTransition] = useTransition()
   
   const [optimisticItems, addOptimisticItem] = useOptimistic(
@@ -181,8 +185,8 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: Routin
       <div className="space-y-3">
         {(() => {
           type TimelineEvent = 
-            | { status: 'completed', id: string, title: string, details: string, time: string, type: string, loggedAt: string }
-            | { status: 'pending', id: string, title: string, details: string, time: string, type: string }
+            | { status: 'completed', id: string, title: string, details: string, time: string, type: string, loggedAt: string, isGoogleTask?: boolean }
+            | { status: 'pending', id: string, title: string, details: string, time: string, type: string, isGoogleTask?: boolean }
 
           const events: TimelineEvent[] = [
             ...optimisticItems.map(item => ({
@@ -204,7 +208,17 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: Routin
                 details: routine.description || 'Planejado para hoje',
                 time: routine.scheduled_time.substring(0, 5),
                 type: routine.category,
-              }))
+                isGoogleTask: false
+              })),
+            ...googleTasks.map(task => ({
+              status: 'pending' as const,
+              id: task.id,
+              title: task.title || '(Sem título)',
+              details: task.notes || 'Google Task',
+              time: '23:59', // Para ficar no fim do dia caso não tenha hora específica
+              type: 'task',
+              isGoogleTask: true
+            }))
           ]
 
           // Order by time
@@ -236,17 +250,17 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: Routin
                     </div>
                   ) : (
                     <button 
-                      onClick={() => handleCompleteRoutine(scheduledRoutines.find(r => r.id === item.id)!)}
-                      disabled={isPending && completingId === item.id}
+                      onClick={() => item.isGoogleTask ? onCompleteGoogleTask?.(item.id) : handleCompleteRoutine(scheduledRoutines.find(r => r.id === item.id)!)}
+                      disabled={(isPending && completingId === item.id) || completingGoogleTask === item.id}
                       title="Marcar como concluído"
                       className="w-8 h-8 rounded-xl flex items-center justify-center transition-all bg-slate-800 text-slate-500 hover:bg-emerald-500/20 hover:text-emerald-400 border border-transparent hover:border-emerald-500/30 group"
                     >
-                      {isPending && completingId === item.id ? (
+                      {(isPending && completingId === item.id) || completingGoogleTask === item.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <Clock className="w-4 h-4 group-hover:hidden" />
                       )}
-                      {!isPending && completingId !== item.id && (
+                      {!(isPending && completingId === item.id) && completingGoogleTask !== item.id && (
                         <CheckCircle2 className="w-4 h-4 hidden group-hover:block" />
                       )}
                     </button>
@@ -258,6 +272,7 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: Routin
                     {item.type === 'workout' && <Dumbbell className="w-4 h-4 text-emerald-400" />}
                     {item.type === 'hydration' && <Droplets className="w-4 h-4 text-cyan-400" />}
                     {item.type === 'habit' && <Sparkles className="w-4 h-4 text-purple-400" />}
+                    {item.type === 'task' && <CheckSquare className="w-4 h-4 text-purple-400" />}
                   </div>
 
                   <div>
@@ -271,7 +286,7 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [] }: Routin
                 <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border shadow-inner ${
                   isCompleted ? 'bg-slate-800/80 text-slate-300 border-slate-700/50' : 'bg-slate-900 text-slate-600 border-slate-800/30'
                 }`}>
-                  {item.time}
+                  {item.time === '23:59' ? 'Dia Todo' : item.time}
                 </span>
               </div>
             )
