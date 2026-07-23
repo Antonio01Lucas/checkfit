@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
+import { WaterTracker } from '@/components/dashboard/water-tracker'
 import { 
   Sparkles, 
   Droplets, 
@@ -21,16 +21,13 @@ import type { Profile } from '@/types/database'
  * Painel Principal (Dashboard) do CheckFit.
  * Apresenta o resumo do dia, contador de água, cronograma de rotina e ações rápidas.
  */
-export default function DashboardClient({ profile }: { profile: Profile | null }) {
-  // Estado local para controle interativo da quantidade de água consumida (em mL)
-  const [waterIntake, setWaterIntake] = useState(1750)
-  const waterTarget = 2500
-
-  // Função para adicionar ingestão de água
-  const addWater = (amount: number) => {
-    setWaterIntake((prev) => Math.min(prev + amount, 5000))
-  }
-
+export default function DashboardClient({ 
+  profile,
+  initialWaterIntake 
+}: { 
+  profile: Profile | null,
+  initialWaterIntake: number
+}) {
   // Lista simulada de itens da rotina diária
   const todayRoutine = [
     {
@@ -75,9 +72,6 @@ export default function DashboardClient({ profile }: { profile: Profile | null }
     },
   ]
 
-  // Cálculo da porcentagem da meta de água
-  const waterPercentage = Math.min(Math.round((waterIntake / waterTarget) * 100), 100)
-
   return (
     <div className="min-h-screen bg-[#090d16] flex">
       {/* Menu Lateral de Navegação */}
@@ -120,46 +114,7 @@ export default function DashboardClient({ profile }: { profile: Profile | null }
           {/* Grid de Cards de Estatísticas e Metas */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card de Hidratação Interativa */}
-            <div className="glass-panel p-5 rounded-2xl relative overflow-hidden">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2 text-cyan-400 font-semibold text-sm">
-                  <Droplets className="w-5 h-5" />
-                  <span>Meta de Hidratação</span>
-                </div>
-                <span className="text-xs font-bold text-cyan-300 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/20">
-                  {waterPercentage}%
-                </span>
-              </div>
-
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-slate-100">{waterIntake}</span>
-                <span className="text-xs text-slate-400 font-medium">/ {waterTarget} mL</span>
-              </div>
-
-              {/* Barra de Progresso */}
-              <div className="w-full bg-slate-800 rounded-full h-2.5 mt-3 overflow-hidden">
-                <div 
-                  className="bg-linear-to-r from-cyan-500 to-blue-500 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${waterPercentage}%` }}
-                ></div>
-              </div>
-
-              {/* Botões de Ação Rápida de Água */}
-              <div className="flex items-center gap-2 mt-4">
-                <button 
-                  onClick={() => addWater(250)}
-                  className="flex-1 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-medium text-xs border border-cyan-500/30 transition-all flex items-center justify-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" /> +250 mL
-                </button>
-                <button 
-                  onClick={() => addWater(500)}
-                  className="flex-1 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-medium text-xs border border-cyan-500/30 transition-all flex items-center justify-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" /> +500 mL
-                </button>
-              </div>
-            </div>
+            <WaterTracker initialWaterIntake={initialWaterIntake} />
 
             {/* Card de Exercícios do Dia */}
             <div className="glass-panel p-5 rounded-2xl">
