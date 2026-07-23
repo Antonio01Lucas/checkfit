@@ -21,11 +21,11 @@ export function WaterTracker({ initialWaterIntake }: WaterTrackerProps) {
 
   // Função para adicionar ingestão de água, executando a server action
   const handleAddWater = (amount: number) => {
-    // 1. Atualização Otimista
-    addOptimisticWater(amount)
-
-    // 2. Server Action em background
     startTransition(async () => {
+      // 1. Atualização Otimista (DEVE ficar dentro da transition no React 19)
+      addOptimisticWater(amount)
+
+      // 2. Server Action em background
       try {
         await addWaterIntake(amount)
       } catch (error) {
