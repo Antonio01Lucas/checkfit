@@ -1,0 +1,99 @@
+# Integração do Sistema de Hidratação Concluída 💧
+
+A implementação foi finalizada seguindo rigorosamente o padrão de mercado (Next.js 15 + React 19). Aqui está o resumo técnico e visual das mudanças realizadas no painel do usuário:
+
+## 1. Arquitetura de Dados (Server Actions)
+
+Criamos as Server Actions para lidar com o Supabase com máxima segurança no lado do servidor, sem expor regras de negócio ao navegador.
+
+- **`getDailyHydration()`**: Busca na tabela `hydration_logs` a soma de toda a água bebida (em ml) desde as `00:00:00` do dia atual.
+- **`addWaterIntake(amount)`**: Registra o novo consumo vinculando ao ID do usuário autenticado e já emite um `revalidatePath('/dashboard')` para invalidar o cache da página.
+
+## 2. Refatoração do Componente `<WaterTracker />`
+
+O rastreador de água foi isolado em seu próprio **Client Component**, deixando o código do Dashboard muito mais limpo.
+
+> [!TIP]
+> O estado local comum (`useState`) foi substituído pelo novíssimo **`useOptimistic`**. Isso garante que, ao clicar em "+250 mL", a barra de progresso encha no mesmo milissegundo, antes mesmo do Supabase responder.
+
+## 3. Tratamento de Erros e Reversão (Rollback)
+
+Em casos de falha de conexão ou erro do Supabase, o React irá:
+1. Reverter a barra de progresso para a quantidade real salva no banco.
+2. Disparar um alerta nativo avisando sobre a falha, garantindo que o usuário nunca seja enganado por uma interface dessincronizada com o servidor.
+
+## Como Validar
+
+1. Abra o **Dashboard** no seu navegador (`localhost:3000`).
+2. Sua água estará zerada (`0 / 2500 mL`).
+3. Clique em **+250 mL** ou **+500 mL** e observe a velocidade em que a barra é preenchida.
+4. Recarregue a página (F5). O valor deve permanecer o mesmo, confirmando que os dados foram recuperados com sucesso do banco de dados `hydration_logs`!
+
+---
+
+# Integração da Linha do Tempo de Rotina Concluída 🗓️
+
+Substituímos os dados estáticos (falsos) do seu Dashboard por dados reais, sincronizados com o Supabase! 
+
+## 1. Múltiplas Server Actions (Refeições e Treinos)
+Criamos um sistema unificado em `src/app/actions/routine.ts` que consulta duas tabelas diferentes de forma independente e une os dados:
+- **`getTodayRoutine()`**: Busca simultaneamente em `workout_logs` e `meal_logs` para construir a sua linha do tempo de hoje, ordenando os itens pela hora em que foram criados (`logged_at`).
+- **`logWorkout()`** e **`logMeal()`**: Funções dedicadas para salvar novos registros nessas tabelas de forma segura.
+
+## 2. Componente de UI Dinâmico
+Extraímos o HTML antigo e criamos o `<RoutineTimeline />`. Agora ele possui um sistema interativo onde você clica em "Nova Tarefa" e escolhe adicionar um Treino ou uma Refeição. 
+O botão de salvar utiliza **Optimistic UI**, adicionando o item à tela instantaneamente antes mesmo da requisição terminar, criando uma interface *Premium* e rápida.
+
+## Como Validar
+1. Acesse o **Dashboard** e clique nos botões **+ Refeição** e **+ Treino** na sessão "Atividades Concluídas Hoje".
+2. Preencha um nome e calorias, e salve.
+3. Veja o item aparecer na lista instantaneamente.
+4. Ao dar F5, comprove que a informação não some, confirmando a persistência no Supabase!
+
+---
+
+# Integração do Assistente de Inteligência Artificial 🧠
+
+O CheckFit agora é inteligente! Substituímos o banner estático por um gerador de recomendações altamente contextualizadas utilizando a API do Google Gemini (`@google/genai`).
+
+## 1. Contexto Dinâmico (Server Action)
+Criamos a Server Action `getDailyAIRecommendation()` que recupera todos os seus registros de hoje (Água, Treinos e Refeições) e constrói um prompt invisível para a IA. O Gemini lê esses dados e responde com uma dica super personalizada!
+
+## 2. Banner Animado (Loading state)
+O novo `<AIBanner />` roda de forma assíncrona. Enquanto a IA está "pensando", o painel continua utilizável e exibe um elegante *Skeleton Loader* (animação pulsante) no local do texto.
+
+## Chave de API
+O código já está blindado (possui um *fallback*) caso você não tenha uma chave configurada no seu `.env.local` (`GEMINI_API_KEY`). A mensagem na tela irá instruí-lo a adicionar a chave. Assim que você colocar a chave e dar um F5, a mágica acontecerá instantaneamente!
+
+---
+
+# Minha Rotina ⏱️
+
+Nós acabamos de construir o sistema de gerenciamento de **Hábitos e Rotinas Agendadas** (tabela `routines` no Supabase). Com essa tela, você pode organizar exatamente como deve ser o seu dia, e o app saberá os horários planejados para cada atividade!
+
+## Novas Funcionalidades
+
+### 1. Novo Layout Modular
+- Atualizamos o link na barra lateral para apontar para a nova página `/dashboard/routine`.
+- Reutilizamos a `<Sidebar />` e o `<Header />`, criando uma experiência fluida de navegação SPA sem piscar a tela e mantendo as estatísticas do seu perfil sempre atualizadas no topo.
+
+### 2. Gestão de Hábitos (CRUD)
+- **Criar:** Um formulário limpo que permite adicionar o "Título", "Horário", "Categoria" (Treino, Refeição, Água, Hábito) e "Descrição".
+- **Listar:** Suas rotinas são listadas em ordem cronológica. Os ícones e cores mudam dinamicamente dependendo da categoria que você escolheu!
+- **Toggle de Ativação:** Vai pular um hábito hoje? Você não precisa apagar! Basta usar o *switch* para desativá-lo temporariamente. O visual dele fica "apagadinho" indicando inatividade.
+- **Excluir:** Um botão de lixeira vermelho para apagar permanentemente aquele hábito.
+
+### 3. Server Actions e Otimismo
+- A inserção e o *toggle* utilizam Server Actions, mas na interface gráfica usamos os hooks de Transição (`useTransition`) para aplicar *Optimistic Updates*. Isso significa que a interface é atualizada **imediatamente** quando você clica, sem esperar a resposta lenta da internet, dando uma sensação de app nativo extremamente veloz.
+
+## Como Testar
+1. No menu lateral, clique em **Minha Rotina**.
+2. Clique no botão azul **+ Novo Hábito** no canto superior direito.
+3. Adicione, por exemplo:
+   - Título: "Café da manhã Reforçado"
+   - Horário: "08:00"
+   - Categoria: "Refeição"
+   - Descrição: "Ovos e tapioca"
+4. Clique em Salvar. O hábito vai aparecer lindamente na sua lista com um ícone laranja!
+5. Tente desativá-lo (clicando no botão verde).
+6. Quando sentir que está pronto, me avise para prosseguirmos!

@@ -1,0 +1,12 @@
+- [x] 1. Atualizar Barra Lateral (Sidebar)
+  - [x] Alterar link 'Minha Rotina' para `/dashboard/routine`
+- [x] 2. Criar Server Actions
+  - [x] Criar arquivo `src/app/actions/scheduled-routines.ts`
+  - [x] Implementar funções de CRUD (get, create, update, delete, toggle)
+- [x] 3. Criar Página de Rotina
+  - [x] Criar arquivo `src/app/dashboard/routine/page.tsx`
+  - [x] Criar layout base invocando Sidebar e Header
+- [x] 4. Criar Interface Cliente
+  - [x] Criar arquivo `src/app/dashboard/routine/routine-client.tsx`
+  - [x] Adicionar formulário de cadastro de novo hábito
+  - [x] Listar hábitos com capacidade de deletar/ativar

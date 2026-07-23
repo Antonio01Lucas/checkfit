@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, Dumbbell, Utensils, Droplets, Sparkles, Clock, Trash2 } from 'lucide-react'
+import { Plus, Dumbbell, Utensils, Droplets, Sparkles, Clock, Trash2, type LucideIcon } from 'lucide-react'
 import { createRoutine, deleteRoutine, toggleRoutineActive } from '@/app/actions/scheduled-routines'
 import type { RoutineItem, RoutineCategory } from '@/types/database'
 
@@ -9,7 +9,7 @@ interface RoutineClientProps {
   initialRoutines: RoutineItem[]
 }
 
-const categoryConfig: Record<RoutineCategory, { icon: any; color: string; bg: string; label: string }> = {
+const categoryConfig: Record<RoutineCategory, { icon: LucideIcon; color: string; bg: string; label: string }> = {
   workout: { icon: Dumbbell, color: 'text-emerald-400', bg: 'bg-emerald-500/20', label: 'Treino' },
   meal: { icon: Utensils, color: 'text-orange-400', bg: 'bg-orange-500/20', label: 'Refeição' },
   hydration: { icon: Droplets, color: 'text-cyan-400', bg: 'bg-cyan-500/20', label: 'Água' },

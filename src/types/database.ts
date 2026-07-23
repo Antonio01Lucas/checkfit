@@ -13,6 +13,8 @@ export interface Profile {
   daily_calorie_target: number
   google_calendar_connected: boolean
   google_tasks_connected: boolean
+  ai_provider: 'openai' | 'gemini' | 'anthropic' | null
+  ai_api_key: string | null
   created_at: string
   updated_at: string
 }

@@ -63,3 +63,30 @@ export async function updateProfileTargets(
 
   return { success: true, error: null }
 }
+
+/**
+ * Atualiza as preferências de IA do usuário (BYOK)
+ */
+export async function updateAIPreferences(provider: 'openai' | 'gemini' | 'anthropic' | null, apiKey: string | null): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { success: false, error: 'Usuário não autenticado' }
+
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({
+      ai_provider: provider,
+      ai_api_key: apiKey,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', user.id)
+
+  if (updateError) {
+    console.error('Erro ao salvar preferências de IA:', updateError)
+    return { success: false, error: 'Falha ao salvar as configurações' }
+  }
+
+  revalidatePath('/dashboard/settings')
+  return { success: true }
+}

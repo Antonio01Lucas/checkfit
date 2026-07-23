@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Droplets, Flame, User, Save, ShieldCheck, Mail } from 'lucide-react'
+import { Droplets, Flame, User, Save, ShieldCheck, Mail, Brain, KeyRound } from 'lucide-react'
 import { updateProfileTargets } from '@/app/actions/profile'
+import { updateAIPreferences } from '@/app/actions/profile'
 import { useRouter } from 'next/navigation'
 import type { Profile } from '@/types/database'
 
@@ -19,6 +20,12 @@ export function SettingsClient({ initialProfile }: SettingsClientProps) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
+  // AI State
+  const [aiProvider, setAiProvider] = useState<'openai' | 'gemini' | 'anthropic' | null>(initialProfile.ai_provider || null)
+  const [aiApiKey, setAiApiKey] = useState(initialProfile.ai_api_key || '')
+  const [isAiSaving, setIsAiSaving] = useState(false)
+  const [aiSaveStatus, setAiSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
   const handleSave = async () => {
     setIsSaving(true)
     setSaveStatus('idle')
@@ -33,6 +40,21 @@ export function SettingsClient({ initialProfile }: SettingsClientProps) {
     } else {
       setSaveStatus('error')
       setErrorMessage(error || 'Ocorreu um erro desconhecido.')
+    }
+  }
+
+  const handleSaveAI = async () => {
+    setIsAiSaving(true)
+    setAiSaveStatus('idle')
+    const { success, error } = await updateAIPreferences(aiProvider, aiApiKey || null)
+    setIsAiSaving(false)
+    if (success) {
+      setAiSaveStatus('success')
+      router.refresh()
+      setTimeout(() => setAiSaveStatus('idle'), 3000)
+    } else {
+      setAiSaveStatus('error')
+      setErrorMessage(error || 'Ocorreu um erro ao salvar as configurações de IA.')
     }
   }
 
@@ -126,6 +148,69 @@ export function SettingsClient({ initialProfile }: SettingsClientProps) {
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs">kcal</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card: Inteligência Artificial Avançada */}
+        <div className="glass-panel p-8 rounded-3xl bg-slate-900/60 border border-slate-800 mt-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-100 flex items-center gap-3 mb-1">
+                <Brain className="w-6 h-6 text-purple-400" />
+                Inteligência Artificial Própria
+              </h2>
+              <p className="text-sm text-slate-400">
+                Avançado: Forneça sua própria chave (BYOK) para usar IAs pagas (GPT-4, Claude). Se deixado em branco, usaremos a nossa IA nativa gratuita (Gemini).
+              </p>
+            </div>
+            <button
+              onClick={handleSaveAI}
+              disabled={isAiSaving}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-lg shrink-0 ${
+                aiSaveStatus === 'success'
+                  ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/25'
+                  : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/25'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {isAiSaving ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {aiSaveStatus === 'success' ? 'Salvo!' : 'Salvar IA'}
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-slate-300">Provedor de IA</label>
+                <select
+                  value={aiProvider || ''}
+                  onChange={(e) => setAiProvider(e.target.value ? (e.target.value as any) : null)}
+                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                >
+                  <option value="">Usar IA Nativa do App (Gratuito)</option>
+                  <option value="openai">OpenAI (ChatGPT)</option>
+                  <option value="gemini">Google Gemini</option>
+                  <option value="anthropic">Anthropic (Claude)</option>
+                </select>
+              </div>
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-slate-400" />
+                  Sua Chave de API (Secret Key)
+                </label>
+                <input
+                  type="password"
+                  placeholder={aiProvider ? "sk-..." : "Nenhuma chave necessária..."}
+                  disabled={!aiProvider}
+                  value={aiApiKey}
+                  onChange={(e) => setAiApiKey(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
+                />
               </div>
             </div>
           </div>
