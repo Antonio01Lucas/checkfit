@@ -6,6 +6,7 @@ import { WaterTracker } from '@/components/dashboard/water-tracker'
 import { RoutineTimeline } from '@/components/dashboard/routine-timeline'
 import { AIBanner } from '@/components/dashboard/ai-banner'
 import { CalendarWidget } from '@/components/dashboard/calendar-widget'
+import { TasksWidget } from '@/components/dashboard/tasks-widget'
 import { type RoutineItem } from '@/app/actions/routine'
 import { 
   Dumbbell, 
@@ -77,6 +78,9 @@ export default function DashboardClient({
 
             {/* Integração Google Calendar */}
             <CalendarWidget />
+
+            {/* Integração Google Tasks */}
+            <TasksWidget />
           </div>
 
           {/* Cronograma da Rotina Diária */}

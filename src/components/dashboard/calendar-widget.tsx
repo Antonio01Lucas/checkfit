@@ -53,7 +53,7 @@ export function CalendarWidget() {
   }
 
   return (
-    <div className="glass-panel p-6 rounded-3xl bg-slate-900/60 border border-slate-800 flex flex-col h-full min-h-[350px]">
+    <div className="glass-panel p-6 rounded-3xl bg-slate-900/60 border border-slate-800 flex flex-col h-full min-h-87.5">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
@@ -84,7 +84,7 @@ export function CalendarWidget() {
               <p className="text-slate-300 font-medium mb-1">
                 {error === 'token_expired' ? 'Sua sessão expirou' : 'Google Calendar desconectado'}
               </p>
-              <p className="text-slate-500 text-sm max-w-[200px] mx-auto mb-6">
+              <p className="text-slate-500 text-sm max-w-50 mx-auto mb-6">
                 Conecte sua conta para ver seus compromissos e planejar sua rotina.
               </p>
             </div>
@@ -108,16 +108,16 @@ export function CalendarWidget() {
             <p>Nenhum compromisso agendado para hoje.</p>
           </div>
         ) : (
-          <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1 max-h-[300px]">
+          <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1 max-h-75">
             {events.map((event) => (
               <a 
                 key={event.id}
                 href={event.htmlLink}
                 target="_blank"
                 rel="noreferrer"
-                className="group flex gap-4 p-4 rounded-2xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 transition-all block"
+                className="group flex gap-4 p-4 rounded-2xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 transition-all"
               >
-                <div className="flex flex-col items-center justify-center min-w-[50px] border-r border-slate-700/50 pr-4">
+                <div className="flex flex-col items-center justify-center min-w-12.5 border-r border-slate-700/50 pr-4">
                   <span className="text-sm font-bold text-slate-200">
                     {formatTime(event.start.dateTime)}
                   </span>

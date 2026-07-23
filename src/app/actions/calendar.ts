@@ -40,18 +40,18 @@ export async function getTodayCalendarEvents(): Promise<{ events: GoogleEvent[],
   tomorrow.setDate(tomorrow.getDate() + 1)
 
   try {
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${today.toISOString()}&timeMax=${tomorrow.toISOString()}&singleEvents=true&orderBy=startTime`
+    console.log('Buscando eventos no Google:', url)
+
     // 4. Buscar Eventos no Google Calendar API
-    const response = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${today.toISOString()}&timeMax=${tomorrow.toISOString()}&singleEvents=true&orderBy=startTime`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/json'
-        },
-        // Não usar cache em servidor, para pegar a agenda em tempo real
-        cache: 'no-store'
-      }
-    )
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json'
+      },
+      // Não usar cache em servidor, para pegar a agenda em tempo real
+      cache: 'no-store'
+    })
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -59,11 +59,25 @@ export async function getTodayCalendarEvents(): Promise<{ events: GoogleEvent[],
         // TODO: Implementar lógica de refresh_token se houver
         return { events: [], error: 'token_expired' }
       }
-      throw new Error(`Google API responded with ${response.status}`)
+      const errorBody = await response.text()
+      console.error('Google API Error:', errorBody)
+      throw new Error(`Google API responded with ${response.status}: ${errorBody}`)
     }
 
     const data = await response.json()
-    return { events: data.items || [], error: null }
+    console.log(`O Google retornou ${data.items?.length || 0} eventos na agenda 'primary' (principal)`)
+    
+    // Imprimir detalhes dos eventos encontrados para debug
+    if (data.items?.length > 0) {
+      data.items.forEach((ev: any) => {
+        console.log(`- Evento: "${ev.summary}" | Status: ${ev.status} | Início: ${ev.start?.dateTime || ev.start?.date}`)
+      })
+    }
+
+    // Filtrar eventos cancelados
+    const validEvents = (data.items || []).filter((ev: any) => ev.status !== 'cancelled')
+    
+    return { events: validEvents, error: null }
   } catch (error) {
     console.error('Erro ao buscar calendário:', error)
     return { events: [], error: 'Erro de conexão com Google' }
