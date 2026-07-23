@@ -69,7 +69,7 @@ export function Sidebar() {
       </div>
 
       {/* Widget de Status da Assistente de IA */}
-      <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-purple-500/20 bg-gradient-to-b from-purple-500/5 to-transparent">
+      <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-purple-500/20 bg-linear-to-b from-purple-500/5 to-transparent">
         <div className="flex items-center gap-2 mb-2">
           <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-400">
             <Sparkles className="w-4 h-4" />
