@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { WaterTracker } from '@/components/dashboard/water-tracker'
 import { RoutineTimeline } from '@/components/dashboard/routine-timeline'
+import { AIBanner } from '@/components/dashboard/ai-banner'
 import { type RoutineItem } from '@/app/actions/routine'
 import { 
   Sparkles, 
@@ -44,29 +45,8 @@ export default function DashboardClient({
         />
 
         <main className="flex-1 p-6 space-y-6 overflow-y-auto">
-          {/* Banner de Boas-Vindas com Sugestão de IA */}
-          <div className="glass-panel p-6 rounded-3xl bg-linear-to-r from-slate-900/90 via-slate-900/60 to-purple-950/30 border border-purple-500/20 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold w-fit mb-3">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Recomendação Inteligente de Hoje</span>
-                </div>
-                <h2 className="text-xl font-bold text-slate-100">
-                  Olá, {profile?.full_name ? profile.full_name.split(' ')[0] : 'foco'}! Dia de recuperação e hidratação.
-                </h2>
-                <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                  A IA analisou sua rotina: você tem um treino de 45min agendado às 11:00. 
-                  Lembre-se de tomar pelo menos mais <strong className="text-cyan-300">750ml de água</strong> antes das 13:00 para manter a hidratação alta.
-                </p>
-              </div>
-
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all shadow-lg shadow-purple-600/25 whitespace-nowrap self-start md:self-auto">
-                <span>Ajustar com IA</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          {/* Banner de Boas-Vindas com Inteligência Artificial */}
+          <AIBanner profile={profile} />
 
           {/* Grid de Cards de Estatísticas e Metas */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
