@@ -19,8 +19,8 @@ export async function addWaterIntake(amount: number) {
     .from('hydration_logs')
     .insert({
       user_id: user.id,
-      amount: amount,
-      // created_at é gerado automaticamente pelo banco
+      amount_ml: amount,
+      // logged_at é gerado automaticamente pelo banco
     })
 
   if (error) {
@@ -52,16 +52,16 @@ export async function getDailyHydration(): Promise<number> {
 
   const { data, error } = await supabase
     .from('hydration_logs')
-    .select('amount')
+    .select('amount_ml')
     .eq('user_id', user.id)
-    .gte('created_at', today.toISOString())
-    .lt('created_at', tomorrow.toISOString())
+    .gte('logged_at', today.toISOString())
+    .lt('logged_at', tomorrow.toISOString())
 
   if (error) {
     console.error('Erro ao buscar hidratação diária:', error)
     return 0
   }
 
-  const total = data.reduce((sum, log) => sum + log.amount, 0)
+  const total = data.reduce((sum, log) => sum + log.amount_ml, 0)
   return total
 }
