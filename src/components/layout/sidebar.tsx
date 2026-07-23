@@ -23,7 +23,7 @@ export function Sidebar() {
   // Itens de navegação do aplicativo
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Minha Rotina', href: '/routine', icon: CalendarDays },
+    { name: 'Minha Rotina', href: '/dashboard/routine', icon: CalendarDays },
     { name: 'Nutrição & Água', href: '/nutrition', icon: Utensils },
     { name: 'Exercícios', href: '/workouts', icon: Dumbbell },
     { name: 'Integrações Google', href: '/integrations', icon: Share2 },
