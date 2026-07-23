@@ -10,8 +10,9 @@ import { TasksWidget } from '@/components/dashboard/tasks-widget'
 import { type RoutineItem } from '@/app/actions/routine'
 import { 
   Dumbbell, 
-  Calendar, 
-  Flame
+  Flame, 
+  TrendingUp,
+  Activity
 } from 'lucide-react'
 
 import type { Profile } from '@/types/database'
