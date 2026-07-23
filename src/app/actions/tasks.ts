@@ -1,0 +1,68 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+
+export type GoogleTask = {
+  id: string
+  title: string
+  notes?: string
+  status: 'needsAction' | 'completed'
+  due?: string
+  updated: string
+}
+
+/**
+ * Busca as tarefas pendentes do Google Tasks
+ */
+export async function getGoogleTasks(): Promise<{ tasks: GoogleTask[], error: string | null }> {
+  const supabase = await createClient()
+
+  // 1. Verificar o usuário logado
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { tasks: [], error: 'Usuário não autenticado' }
+
+  // 2. Buscar tokens no banco
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('google_access_token, google_calendar_connected')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.google_calendar_connected || !profile.google_access_token) {
+    return { tasks: [], error: 'not_connected' }
+  }
+
+  const accessToken = profile.google_access_token
+
+  try {
+    const url = `https://tasks.googleapis.com/tasks/v1/lists/@default/tasks?showCompleted=false&showHidden=false`
+    console.log('Buscando tarefas no Google:', url)
+
+    // 3. Buscar Tarefas no Google Tasks API
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json'
+      },
+      // Não usar cache em servidor
+      cache: 'no-store'
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return { tasks: [], error: 'token_expired' }
+      }
+      const errorBody = await response.text()
+      console.error('Google Tasks API Error:', errorBody)
+      throw new Error(`Google Tasks API responded with ${response.status}: ${errorBody}`)
+    }
+
+    const data = await response.json()
+    console.log(`O Google retornou ${data.items?.length || 0} tarefas pendentes`)
+    
+    return { tasks: data.items || [], error: null }
+  } catch (error) {
+    console.error('Erro ao buscar tarefas:', error)
+    return { tasks: [], error: 'Erro de conexão com Google' }
+  }
+}
