@@ -25,7 +25,7 @@ export function AIBanner({ profile }: AIBannerProps) {
           setRecommendation(text)
           setLoading(false)
         }
-      } catch (error) {
+      } catch {
         if (isMounted) {
           setRecommendation("Continue focando na sua hidratação e treinos de hoje!")
           setLoading(false)
@@ -41,7 +41,7 @@ export function AIBanner({ profile }: AIBannerProps) {
   }, [])
 
   return (
-    <div className="glass-panel p-6 rounded-3xl bg-linear-to-r from-slate-900/90 via-slate-900/60 to-purple-950/30 border border-purple-500/20 relative overflow-hidden min-h-[140px]">
+    <div className="glass-panel p-6 rounded-3xl bg-linear-to-r from-slate-900/90 via-slate-900/60 to-purple-950/30 border border-purple-500/20 relative overflow-hidden min-h-35">
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="w-full">
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold w-fit mb-3">

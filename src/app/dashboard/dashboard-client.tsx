@@ -7,10 +7,8 @@ import { RoutineTimeline } from '@/components/dashboard/routine-timeline'
 import { AIBanner } from '@/components/dashboard/ai-banner'
 import { type RoutineItem } from '@/app/actions/routine'
 import { 
-  Sparkles, 
   Dumbbell, 
   Calendar, 
-  ChevronRight,
   Flame
 } from 'lucide-react'
 

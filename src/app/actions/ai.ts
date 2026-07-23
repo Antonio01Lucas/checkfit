@@ -1,7 +1,7 @@
 'use server'
 
 import { GoogleGenAI } from '@google/genai'
-import { getTodayRoutine, type RoutineItem } from './routine'
+import { getTodayRoutine } from './routine'
 import { getDailyHydration } from './hydration'
 import { createClient } from '@/lib/supabase/server'
 
