@@ -1,0 +1,23 @@
+# 🚀 Integração Completa do Google Tasks
+
+Finalizamos a integração interativa do **Google Tasks** no CheckFit! Agora suas tarefas não são apenas listadas, mas fazem parte ativamente do seu dia.
+
+## O que foi feito?
+
+1. **Baixamos o Estado das Tarefas**
+   - O `TasksWidget` antes era isolado. Agora o estado das tarefas foi elevado para o `DashboardClient`, permitindo que elas sejam compartilhadas com toda a interface.
+
+2. **Ação de Concluir Tarefas**
+   - Implementamos a função `completeGoogleTask` (no servidor) que se comunica via PATCH com a API do Google Tasks.
+   - Adicionamos tratamento visual (`Loader`) e **Atualização Otimista** (a tarefa some instantaneamente da tela enquanto sincroniza no fundo para melhor experiência).
+
+3. **Integração na Linha do Tempo (Meu Dia)**
+   - As tarefas que não foram concluídas agora aparecem também na **RoutineTimeline**, listadas como atividades para "O Dia Todo" (23:59).
+   - Você pode concluí-las tanto pelo `TasksWidget` quanto pela aba da própria Linha do Tempo!
+   - Elas possuem um ícone próprio (`CheckSquare`) de cor roxa, para diferenciar facilmente de Refeições (Laranja) e Treinos (Verde).
+
+## Como Testar?
+1. Rode `npm run dev`.
+2. Assegure-se que conectou sua conta do Google na Dashboard (caso as tarefas não apareçam).
+3. Veja as tarefas surgirem no widget e na "Meu Dia".
+4. Clique no ícone de círculo ou checkbox e assista elas serem marcadas como concluídas!

@@ -1,38 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Calendar as CalendarIcon, Clock, Link as LinkIcon, RefreshCw, Plus } from 'lucide-react'
-import { getTodayCalendarEvents, type GoogleEvent } from '@/app/actions/calendar'
+import { useState } from 'react'
+import { Calendar as CalendarIcon, Clock, Link as LinkIcon, RefreshCw, Plus, X } from 'lucide-react'
+import { type GoogleEvent } from '@/app/actions/calendar'
 import { createClient } from '@/lib/supabase/client'
 
-export function CalendarWidget() {
-  const [events, setEvents] = useState<GoogleEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface CalendarWidgetProps {
+  events: GoogleEvent[]
+  loading: boolean
+  error: string | null
+  onAddEvent?: (title: string, date?: string, startTime?: string, endTime?: string, recurrence?: string) => void
+}
 
-  useEffect(() => {
-    let isMounted = true
+export function CalendarWidget({ events, loading, error, onAddEvent }: CalendarWidgetProps) {
+  const [isAdding, setIsAdding] = useState(false)
+  const [newEventTitle, setNewEventTitle] = useState('')
+  const [newEventDate, setNewEventDate] = useState('')
+  const [newStartTime, setNewStartTime] = useState('')
+  const [newEndTime, setNewEndTime] = useState('')
+  const [newRecurrence, setNewRecurrence] = useState('')
 
-    async function fetchCalendar() {
-      const { events: fetchedEvents, error: fetchError } = await getTodayCalendarEvents()
-      
-      if (isMounted) {
-        if (fetchError) {
-          setError(fetchError)
-        } else {
-          setEvents(fetchedEvents)
-          setError(null)
-        }
-        setLoading(false)
-      }
-    }
-
-    fetchCalendar()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
+  // O fetch e state foram elevados para o DashboardClient
 
   const handleConnectGoogle = async () => {
     const supabase = createClient()
@@ -61,14 +49,135 @@ export function CalendarWidget() {
           </div>
           <h3 className="text-lg font-bold text-slate-100">Sua Agenda de Hoje</h3>
         </div>
-        <button 
-          onClick={() => window.location.reload()}
-          className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-          title="Recarregar Agenda"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          {onAddEvent && (
+            <button 
+              onClick={() => {
+                setIsAdding(!isAdding)
+                if (isAdding) {
+                  setNewEventTitle('')
+                  setNewEventDate('')
+                  setNewStartTime('')
+                  setNewEndTime('')
+                  setNewRecurrence('')
+                }
+              }}
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+              title="Novo Evento"
+            >
+              {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            </button>
+          )}
+          <button 
+            onClick={() => window.location.reload()}
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            title="Recarregar Agenda"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
+
+      {isAdding && onAddEvent && (
+        <div className="mb-6 p-4 rounded-2xl bg-slate-800/40 border border-slate-700/50 flex flex-col gap-3">
+          <input 
+            type="text" 
+            autoFocus
+            placeholder="Título (ex: Reunião com a equipe)"
+            className="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+            value={newEventTitle}
+            onChange={(e) => setNewEventTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setIsAdding(false)
+                setNewEventTitle('')
+                setNewEventDate('')
+                setNewStartTime('')
+                setNewEndTime('')
+                setNewRecurrence('')
+              }
+            }}
+          />
+          
+          <div className="flex-1">
+            <label className="text-[10px] uppercase font-bold text-slate-500 ml-1 mb-1 block">Data (Padrão: Hoje)</label>
+            <input 
+              type="date" 
+              className="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500/50"
+              value={newEventDate}
+              onChange={(e) => setNewEventDate(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-[10px] uppercase font-bold text-slate-500 ml-1 mb-1 block">Início (Opcional)</label>
+              <input 
+                type="time" 
+                className="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500/50"
+                value={newStartTime}
+                onChange={(e) => setNewStartTime(e.target.value)}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] uppercase font-bold text-slate-500 ml-1 mb-1 block">Fim (Opcional)</label>
+              <input 
+                type="time" 
+                className="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500/50"
+                value={newEndTime}
+                onChange={(e) => setNewEndTime(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="flex-1">
+            <label className="text-[10px] uppercase font-bold text-slate-500 ml-1 mb-1 block">Repetição</label>
+            <select 
+              className="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500/50 appearance-none"
+              value={newRecurrence}
+              onChange={(e) => setNewRecurrence(e.target.value)}
+            >
+              <option value="">Não repetir</option>
+              <option value="RRULE:FREQ=DAILY">Todos os dias</option>
+              <option value="RRULE:FREQ=WEEKLY">Semanalmente</option>
+              <option value="RRULE:FREQ=MONTHLY">Mensalmente</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-1">
+            <button 
+              onClick={() => {
+                setIsAdding(false)
+                setNewEventTitle('')
+                setNewEventDate('')
+                setNewStartTime('')
+                setNewEndTime('')
+                setNewRecurrence('')
+              }}
+              className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800 rounded-xl hover:bg-slate-700 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={() => {
+                if (newEventTitle.trim()) {
+                  onAddEvent(newEventTitle.trim(), newEventDate || undefined, newStartTime || undefined, newEndTime || undefined, newRecurrence || undefined)
+                  setNewEventTitle('')
+                  setNewEventDate('')
+                  setNewStartTime('')
+                  setNewEndTime('')
+                  setNewRecurrence('')
+                  setIsAdding(false)
+                }
+              }}
+              disabled={!newEventTitle.trim()}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 text-white rounded-xl text-sm font-bold transition-colors"
+            >
+              Criar Evento
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col">
         {loading ? (

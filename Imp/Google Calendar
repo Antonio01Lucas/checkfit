@@ -1,0 +1,29 @@
+# Adicionar Evento ao Google Calendar
+
+Da mesma forma que fizemos com o Google Tasks, vamos permitir a criação rápida de eventos no Google Calendar diretamente pelo CheckFit. 
+
+## Mudanças Propostas
+
+### 1. Servidor (Server Actions)
+
+#### [MODIFY] `src/app/actions/calendar.ts`
+- **`createGoogleEvent(title: string)`**: Nova função que fará um `POST` na API do Google Calendar (`https://www.googleapis.com/calendar/v3/calendars/primary/events`).
+- Para manter a adição rápida (apenas digitando o título), vamos criar o evento configurado para a **hora atual, com duração de 1 hora**, no dia de hoje. Assim você não perde tempo configurando data e hora no CheckFit; se quiser editar a hora, você pode clicar no evento e ajustar no Google depois.
+
+### 2. Interface (Componentes e Estado)
+
+#### [MODIFY] `src/app/dashboard/dashboard-client.tsx`
+- Adicionar o estado de eventos e a função `handleCreateGoogleEvent(title: string)`.
+- Implementar **Atualização Otimista**, inserindo o evento temporário na lista antes do servidor responder.
+- Passar essa nova função `onAddEvent` para o `CalendarWidget`.
+*(Nota: atualmente o `CalendarWidget` faz o fetch internamente, então precisaremos elevar o estado dele para o `DashboardClient` igual fizemos com as tarefas para que a atualização otimista funcione de forma fluida).*
+
+#### [MODIFY] `src/components/dashboard/calendar-widget.tsx`
+- Refatorar o widget para receber os eventos via props (`events`, `loading`, `error`, `onAddEvent`), removendo o `useEffect` de busca interno.
+- Adicionar o botão `+` (Nova Agenda) no cabeçalho.
+- Exibir o input rápido (idêntico ao de Tarefas) ao clicar no `+`.
+
+---
+
+> [!NOTE]
+> Você concorda em criar o evento sempre com o horário atual + 1 hora de duração para manter a "Adição Rápida"? (Ex: se você criar o evento agora, ele será das 20h30 às 21h30). Ou prefere que ele seja um "Evento de Dia Todo" (All-Day)?

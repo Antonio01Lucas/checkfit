@@ -1,0 +1,35 @@
+# 📅 Criação Avançada de Eventos na Agenda
+
+Vamos aprimorar a criação de eventos do Google Calendar direto pelo CheckFit, permitindo que você defina os horários e, mais importante, force a notificação no seu celular/smartwatch.
+
+## O que vai mudar?
+
+### 1. Interface de Criação (`CalendarWidget`)
+Quando você clicar no `+` na agenda:
+- O input de texto para o título do evento continua.
+- Adicionaremos **dois campos de horário** abaixo do título:
+  - Hora de Início (opcional, padrão: daqui a 15min)
+  - Hora de Fim (opcional, padrão: 1h após o início)
+- Botão "Add" agora passa esses horários para o nosso gerenciador.
+
+### 2. Lógica de Horários (`DashboardClient`)
+- O `handleCreateGoogleEvent` vai receber os horários escolhidos pela UI.
+- Vamos converter o horário (ex: `14:30`) para o formato ISO completo com a data de hoje, para o Google entender exatamente quando é.
+
+### 3. Integração com a API do Google Calendar (`actions/calendar.ts`)
+- Vamos atualizar a função `createGoogleEvent` para aceitar os horários personalizados.
+- **[A Mágica da Notificação]**: Vamos enviar o objeto `reminders` no payload da API:
+  ```json
+  "reminders": {
+    "useDefault": false,
+    "overrides": [
+      { "method": "popup", "minutes": 10 }
+    ]
+  }
+  ```
+  Isso forçará o Google Calendar a disparar uma notificação push no seu celular e smartwatch exatamente 10 minutos antes do evento começar, independente das configurações padrão da sua agenda!
+
+---
+
+> [!IMPORTANT]
+> A notificação de 10 minutos antes é ideal para você? Ou prefere que eu adicione mais uma (ex: 30 minutos antes e 10 minutos antes)? Se aprovar assim, clique em **Proceed**!

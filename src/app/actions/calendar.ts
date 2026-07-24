@@ -84,3 +84,85 @@ export async function getTodayCalendarEvents(): Promise<{ events: GoogleEvent[],
     return { events: [], error: 'Erro de conexão com Google' }
   }
 }
+
+/**
+ * Cria um evento no Google Calendar para o horário atual + 1 hora
+ */
+export async function createGoogleEvent(title: string, startTimeIso?: string, endTimeIso?: string, recurrence?: string): Promise<{ event: GoogleEvent | null, error: string | null }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { event: null, error: 'Usuário não autenticado' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('google_access_token')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.google_access_token) {
+    return { event: null, error: 'not_connected' }
+  }
+
+  const accessToken = profile.google_access_token
+
+  try {
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events`
+    
+    // Configura o evento
+    let startIso = startTimeIso
+    let endIso = endTimeIso
+
+    if (!startIso) {
+      const now = new Date()
+      const start = new Date(now)
+      start.setMinutes(Math.ceil(now.getMinutes() / 15) * 15)
+      start.setSeconds(0, 0)
+      startIso = start.toISOString()
+      
+      const end = new Date(start)
+      end.setHours(end.getHours() + 1)
+      endIso = end.toISOString()
+    } else if (!endIso) {
+      const end = new Date(startIso)
+      end.setHours(end.getHours() + 1)
+      endIso = end.toISOString()
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        summary: title,
+        start: {
+          dateTime: startIso,
+        },
+        end: {
+          dateTime: endIso,
+        },
+        ...(recurrence && { recurrence: [recurrence] }),
+        reminders: {
+          useDefault: false,
+          overrides: [
+            { method: 'popup', minutes: 720 }
+          ]
+        }
+      })
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      console.error('Google Calendar API Error na criação:', errorBody)
+      return { event: null, error: `Erro na API: ${response.status}` }
+    }
+
+    const newEvent = await response.json()
+    return { event: newEvent, error: null }
+  } catch (error) {
+    console.error('Erro ao criar evento:', error)
+    return { event: null, error: 'Erro de conexão com Google' }
+  }
+}

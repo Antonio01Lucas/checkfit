@@ -1,6 +1,7 @@
 'use client'
 
-import { CheckSquare, Link as LinkIcon, RefreshCw, Plus, Clock, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { CheckSquare, Link as LinkIcon, RefreshCw, Plus, Clock, Loader2, X, Edit2, Save } from 'lucide-react'
 import { type GoogleTask } from '@/app/actions/tasks'
 import { createClient } from '@/lib/supabase/client'
 
@@ -10,9 +11,17 @@ interface TasksWidgetProps {
   error: string | null
   completingTask: string | null
   onCompleteTask: (taskId: string) => void
+  onAddTask?: (title: string) => void
+  onEditTask?: (taskId: string, newTitle: string) => void
 }
 
-export function TasksWidget({ tasks, loading, error, completingTask, onCompleteTask }: TasksWidgetProps) {
+export function TasksWidget({ tasks, loading, error, completingTask, onCompleteTask, onAddTask, onEditTask }: TasksWidgetProps) {
+  const [isAdding, setIsAdding] = useState(false)
+  const [newTaskTitle, setNewTaskTitle] = useState('')
+  
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editTime, setEditTime] = useState('')
 
   // O fetch e state foram elevados para o DashboardClient
 
@@ -39,6 +48,25 @@ export function TasksWidget({ tasks, loading, error, completingTask, onCompleteT
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
   }
 
+  const startEditing = (task: GoogleTask, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const title = task.title || ''
+    const match = title.match(/^\[([0-9]{2}:[0-9]{2})\]\s*(.*)$/)
+    if (match) {
+      setEditTime(match[1])
+      setEditTitle(match[2])
+    } else {
+      setEditTime('')
+      setEditTitle(title)
+    }
+    setEditingTaskId(task.id)
+  }
+
+  const getDisplayTitle = (title: string) => {
+    const match = title.match(/^\[([0-9]{2}:[0-9]{2})\]\s*(.*)$/)
+    return match ? match[2] : title
+  }
+
   return (
     <div className="glass-panel p-6 rounded-3xl bg-slate-900/60 border border-slate-800 flex flex-col h-full min-h-87.5">
       <div className="flex items-center justify-between mb-6">
@@ -48,14 +76,64 @@ export function TasksWidget({ tasks, loading, error, completingTask, onCompleteT
           </div>
           <h3 className="text-lg font-bold text-slate-100">Suas Tarefas</h3>
         </div>
-        <button 
-          onClick={() => window.location.reload()}
-          className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-          title="Recarregar Tarefas"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          {onAddTask && (
+            <button 
+              onClick={() => {
+                setIsAdding(!isAdding)
+                if (isAdding) setNewTaskTitle('')
+              }}
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+              title="Nova Tarefa"
+            >
+              {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            </button>
+          )}
+          <button 
+            onClick={() => window.location.reload()}
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            title="Recarregar Tarefas"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
+
+      {isAdding && onAddTask && (
+        <div className="mb-4 flex gap-2">
+          <input 
+            type="text" 
+            autoFocus
+            placeholder="O que você precisa fazer?"
+            className="flex-1 bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/50"
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newTaskTitle.trim()) {
+                onAddTask(newTaskTitle.trim())
+                setNewTaskTitle('')
+                setIsAdding(false)
+              } else if (e.key === 'Escape') {
+                setIsAdding(false)
+                setNewTaskTitle('')
+              }
+            }}
+          />
+          <button 
+            onClick={() => {
+              if (newTaskTitle.trim()) {
+                onAddTask(newTaskTitle.trim())
+                setNewTaskTitle('')
+                setIsAdding(false)
+              }
+            }}
+            disabled={!newTaskTitle.trim()}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:hover:bg-purple-600 text-white rounded-xl text-sm font-semibold transition-colors"
+          >
+            Add
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col">
         {loading ? (
@@ -99,34 +177,102 @@ export function TasksWidget({ tasks, loading, error, completingTask, onCompleteT
             {tasks.map((task) => (
               <div 
                 key={task.id}
-                className="group flex items-start gap-4 p-4 rounded-2xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 transition-all cursor-pointer"
-                onClick={(e) => handleCompleteTaskClick(task.id, e)}
+                className="group flex items-start gap-4 p-4 rounded-2xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 transition-all cursor-pointer relative"
+                onClick={(e) => {
+                  if (editingTaskId !== task.id) {
+                    handleCompleteTaskClick(task.id, e)
+                  }
+                }}
               >
-                <div className="mt-1">
-                  {completingTask === task.id ? (
-                    <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
-                  ) : (
-                    <div className="w-5 h-5 rounded-md border-2 border-slate-500 group-hover:border-purple-400 group-hover:bg-purple-500/20 transition-all"></div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-slate-200 group-hover:text-purple-400 transition-colors leading-snug">
-                    {task.title || '(Sem título)'}
-                  </h4>
-                  {task.notes && (
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-1">
-                      {task.notes}
-                    </p>
-                  )}
-                  {task.due && (
-                    <div className="flex items-center gap-1.5 mt-2 text-slate-400 bg-slate-800/60 w-fit px-2 py-0.5 rounded-md">
-                      <Clock className="w-3 h-3 text-purple-400" />
-                      <span className="text-[11px] font-medium">
-                        Prazo: {formatDue(task.due)}
-                      </span>
+                {editingTaskId === task.id ? (
+                  <div className="flex-1 min-w-0" onClick={e => e.stopPropagation()}>
+                    <div className="flex gap-2 mb-3">
+                      <input 
+                        type="time" 
+                        className="bg-slate-900/60 border border-slate-700/50 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500/50 w-28"
+                        value={editTime}
+                        onChange={(e) => setEditTime(e.target.value)}
+                      />
+                      <input 
+                        type="text" 
+                        autoFocus
+                        className="flex-1 bg-slate-900/60 border border-slate-700/50 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500/50"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && onEditTask) {
+                            const finalTitle = editTime ? `[${editTime}] ${editTitle.trim()}` : editTitle.trim()
+                            if (finalTitle) {
+                              onEditTask(task.id, finalTitle)
+                              setEditingTaskId(null)
+                            }
+                          } else if (e.key === 'Escape') {
+                            setEditingTaskId(null)
+                          }
+                        }}
+                      />
                     </div>
-                  )}
-                </div>
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => setEditingTaskId(null)}
+                        className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800 rounded-xl hover:bg-slate-700 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (onEditTask) {
+                            const finalTitle = editTime ? `[${editTime}] ${editTitle.trim()}` : editTitle.trim()
+                            if (finalTitle) {
+                              onEditTask(task.id, finalTitle)
+                              setEditingTaskId(null)
+                            }
+                          }
+                        }}
+                        className="px-4 py-2 text-xs font-medium text-white bg-purple-600 hover:bg-purple-500 rounded-xl flex items-center gap-1 transition-colors"
+                      >
+                        <Save className="w-3 h-3" /> Salvar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-1">
+                      {completingTask === task.id ? (
+                        <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-md border-2 border-slate-500 group-hover:border-purple-400 group-hover:bg-purple-500/20 transition-all"></div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 pr-8">
+                      <h4 className="text-sm font-semibold text-slate-200 group-hover:text-purple-400 transition-colors leading-snug">
+                        {getDisplayTitle(task.title || '(Sem título)')}
+                      </h4>
+                      {task.notes && (
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-1">
+                          {task.notes}
+                        </p>
+                      )}
+                      {task.due && (
+                        <div className="flex items-center gap-1.5 mt-2 text-slate-400 bg-slate-800/60 w-fit px-2 py-0.5 rounded-md">
+                          <Clock className="w-3 h-3 text-purple-400" />
+                          <span className="text-[11px] font-medium">
+                            Prazo: {formatDue(task.due)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {onEditTask && (
+                      <button 
+                        onClick={(e) => startEditing(task, e)}
+                        className="absolute right-4 top-4 p-2 text-slate-500 hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-all bg-slate-800 rounded-lg border border-slate-700"
+                        title="Editar"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             ))}
           </div>
