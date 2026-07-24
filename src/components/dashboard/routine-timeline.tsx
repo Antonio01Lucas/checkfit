@@ -1,11 +1,15 @@
 'use client'
 
 import { useState, useTransition, useOptimistic } from 'react'
-import { Dumbbell, Utensils, CheckCircle2, X, Clock, Droplets, Sparkles, Loader2, CheckSquare } from 'lucide-react'
-import { type RoutineItem, logWorkout, logMeal } from '@/app/actions/routine'
-import { completeScheduledRoutine } from '@/app/actions/scheduled-routines'
-import type { RoutineItem as DBScheduledRoutine } from '@/types/database'
+import { Dumbbell, Utensils, CheckCircle2, X, Clock, Droplets, Sparkles, Loader2, CheckSquare, Edit2, Trash2 } from 'lucide-react'
+import { type RoutineItem, logWorkout, logMeal, deleteRoutineLog, updateRoutineLog } from '@/app/actions/routine'
+import { completeScheduledRoutine, uncompleteScheduledRoutine } from '@/app/actions/scheduled-routines'
+import type { RoutineItem as DBScheduledRoutine, RoutineCategory } from '@/types/database'
 import type { GoogleTask } from '@/app/actions/tasks'
+
+export type TimelineEvent = 
+  | { status: 'completed', id: string, title: string, details: string, time: string, type: string, loggedAt: string, isGoogleTask?: boolean, routine_id?: string }
+  | { status: 'pending', id: string, title: string, details: string, time: string, type: string, isGoogleTask?: boolean }
 
 interface RoutineTimelineProps {
   initialItems: RoutineItem[]
@@ -20,8 +24,14 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [], googleTa
   
   const [optimisticItems, addOptimisticItem] = useOptimistic(
     initialItems,
-    (state: RoutineItem[], newItem: RoutineItem) => {
-      const updated = [...state, newItem]
+    (state: RoutineItem[], newItem: RoutineItem | { id: string, remove: true } | { id: string, update: true, data: Partial<RoutineItem> }) => {
+      if ('remove' in newItem) {
+        return state.filter(item => item.id !== newItem.id)
+      }
+      if ('update' in newItem) {
+        return state.map(item => item.id === newItem.id ? { ...item, ...newItem.data } : item)
+      }
+      const updated = [...state, newItem as RoutineItem]
       return updated.sort((a, b) => new Date(a.loggedAt).getTime() - new Date(b.loggedAt).getTime())
     }
   )
@@ -97,9 +107,106 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [], googleTa
       
       if (!success) {
         alert(error || 'Falha ao registrar conclusão.')
-        // In a real app with proper error boundary/state, we would revert optimistic update here
       }
       setCompletingId(null)
+    })
+  }
+
+  const handleUncompleteRoutine = (routineId: string, optimisticId: string) => {
+    if (isPending) return
+    setCompletingId(routineId)
+    
+    startTransition(async () => {
+      addOptimisticItem({ id: optimisticId, remove: true } as unknown as RoutineItem)
+      
+      const { success, error } = await uncompleteScheduledRoutine(routineId)
+      
+      if (!success) {
+        alert(error || 'Falha ao desmarcar conclusão.')
+      }
+      setCompletingId(null)
+    })
+  }
+
+  const handleDeleteLog = (id: string, type: string) => {
+    if (!confirm('Deseja realmente apagar este registro?')) return
+    if (isPending) return
+
+    startTransition(async () => {
+      addOptimisticItem({ id, remove: true } as unknown as RoutineItem)
+      const { success, error } = await deleteRoutineLog(id, type as RoutineCategory)
+      if (!success) alert(error || 'Falha ao apagar registro.')
+    })
+  }
+
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editCalories, setEditCalories] = useState('')
+  const [editDuration, setEditDuration] = useState('')
+  const [editAmount, setEditAmount] = useState('')
+  const [editTime, setEditTime] = useState('')
+
+  const startEditing = (item: TimelineEvent) => {
+    setEditingId(item.id)
+    setEditTitle(item.title)
+    setEditTime(item.time !== '23:59' ? item.time : '')
+    if (item.type === 'workout') {
+      const parts = item.details.split(' • ')
+      setEditDuration(parts[0]?.replace(' min', '') || '')
+      setEditCalories(parts[1]?.replace(' kcal', '') || '')
+    } else if (item.type === 'meal') {
+      setEditCalories(item.details.replace(' kcal', ''))
+    } else if (item.type === 'hydration') {
+      setEditAmount(item.details.replace(' ml', ''))
+    }
+  }
+
+  const handleSaveEdit = (item: TimelineEvent) => {
+    startTransition(async () => {
+      const updateData: Record<string, string | number> = {}
+      let newDetails = ''
+
+      if (item.type === 'workout') {
+        updateData.title = editTitle
+        updateData.duration = Number(editDuration) || 0
+        updateData.calories = Number(editCalories) || 0
+        newDetails = `${updateData.duration} min • ${updateData.calories} kcal`
+      } else if (item.type === 'meal') {
+        updateData.title = editTitle
+        updateData.calories = Number(editCalories) || 0
+        newDetails = `${updateData.calories} kcal`
+      } else if (item.type === 'hydration') {
+        updateData.amount = Number(editAmount) || 0
+        newDetails = `${updateData.amount} ml`
+      }
+
+      let newLoggedAt = 'loggedAt' in item ? item.loggedAt : undefined
+      if (editTime && newLoggedAt) {
+        const baseDate = new Date(newLoggedAt)
+        const [hours, minutes] = editTime.split(':')
+        if (hours && minutes) {
+          baseDate.setHours(Number(hours), Number(minutes), 0, 0)
+          newLoggedAt = baseDate.toISOString()
+          updateData.logged_at = newLoggedAt
+        }
+      }
+
+      // Update Otimista
+      addOptimisticItem({
+        id: item.id,
+        update: true,
+        data: {
+          title: editTitle || item.title,
+          details: newDetails,
+          time: editTime || item.time,
+          loggedAt: newLoggedAt
+        }
+      } as unknown as RoutineItem)
+
+      setEditingId(null)
+      
+      const { success, error } = await updateRoutineLog(item.id, item.type as RoutineCategory, updateData)
+      if (!success) alert(error || 'Falha ao atualizar registro.')
     })
   }
 
@@ -184,10 +291,6 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [], googleTa
       {/* Lista de Itens da Rotina */}
       <div className="space-y-3">
         {(() => {
-          type TimelineEvent = 
-            | { status: 'completed', id: string, title: string, details: string, time: string, type: string, loggedAt: string, isGoogleTask?: boolean }
-            | { status: 'pending', id: string, title: string, details: string, time: string, type: string, isGoogleTask?: boolean }
-
           const events: TimelineEvent[] = [
             ...optimisticItems.map(item => ({
               status: 'completed' as const,
@@ -196,7 +299,8 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [], googleTa
               details: item.details,
               time: item.time,
               type: item.type,
-              loggedAt: item.loggedAt
+              loggedAt: item.loggedAt,
+              routine_id: item.routine_id
             })),
             ...scheduledRoutines
               // Filter out routines that are already completed today
@@ -210,15 +314,18 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [], googleTa
                 type: routine.category,
                 isGoogleTask: false
               })),
-            ...googleTasks.map(task => ({
-              status: 'pending' as const,
-              id: task.id,
-              title: task.title || '(Sem título)',
-              details: task.notes || 'Google Task',
-              time: '23:59', // Para ficar no fim do dia caso não tenha hora específica
-              type: 'task',
-              isGoogleTask: true
-            }))
+            ...googleTasks.map(task => {
+              const match = (task.title || '').match(/^\[([0-9]{2}:[0-9]{2})\]\s*(.*)$/)
+              return {
+                status: 'pending' as const,
+                id: task.id,
+                title: match ? match[2] : (task.title || '(Sem título)'),
+                details: task.notes || 'Google Task',
+                time: match ? match[1] : '23:59', // Para ficar no fim do dia caso não tenha hora específica
+                type: 'task',
+                isGoogleTask: true
+              }
+            })
           ]
 
           // Order by time
@@ -235,19 +342,94 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [], googleTa
 
           return events.map((item) => {
             const isCompleted = item.status === 'completed'
+            const canEditOrDelete = isCompleted && !item.routine_id && !item.isGoogleTask
+
+            if (editingId === item.id) {
+              return (
+                <div key={item.id} className="flex flex-col gap-3 p-4 rounded-2xl bg-slate-800/80 border border-slate-700">
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="time" 
+                      value={editTime}
+                      onChange={e => setEditTime(e.target.value)}
+                      className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-purple-500"
+                    />
+                    {item.type !== 'hydration' && (
+                      <input 
+                        type="text" 
+                        value={editTitle}
+                        onChange={e => setEditTitle(e.target.value)}
+                        className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-white"
+                        placeholder="Nome"
+                      />
+                    )}
+                    {item.type === 'workout' && (
+                      <input 
+                        type="number" 
+                        value={editDuration}
+                        onChange={e => setEditDuration(e.target.value)}
+                        className="w-20 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-white"
+                        placeholder="Min"
+                      />
+                    )}
+                    {(item.type === 'workout' || item.type === 'meal') && (
+                      <input 
+                        type="number" 
+                        value={editCalories}
+                        onChange={e => setEditCalories(e.target.value)}
+                        className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-white"
+                        placeholder="Kcal"
+                      />
+                    )}
+                    {item.type === 'hydration' && (
+                      <input 
+                        type="number" 
+                        value={editAmount}
+                        onChange={e => setEditAmount(e.target.value)}
+                        className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-white"
+                        placeholder="mL"
+                      />
+                    )}
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setEditingId(null)} className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200">Cancelar</button>
+                    <button onClick={() => handleSaveEdit(item)} disabled={isPending} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-500">Salvar</button>
+                  </div>
+                </div>
+              )
+            }
+
             return (
               <div 
                 key={`${item.status}-${item.id}`}
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                className={`group flex items-center justify-between p-4 rounded-2xl border transition-all ${
                   isCompleted ? 'bg-slate-900/40 border-emerald-500/20' : 'bg-slate-900/20 border-slate-800/40 opacity-70'
                 }`}
               >
                 <div className="flex items-center gap-4">
                   {/* Status Indicator */}
                   {isCompleted ? (
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center transition-all bg-emerald-500/20 text-emerald-400">
-                      <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-                    </div>
+                    item.routine_id ? ( // Se for uma rotina agendada concluída, podemos desmarcar
+                      <button 
+                        onClick={() => handleUncompleteRoutine(item.routine_id!, item.id)}
+                        disabled={isPending && completingId === item.routine_id}
+                        title="Desmarcar conclusão"
+                        className="w-8 h-8 rounded-xl flex items-center justify-center transition-all bg-emerald-500/20 text-emerald-400 hover:bg-slate-800 hover:text-slate-500 border border-transparent hover:border-slate-700 group"
+                      >
+                        {(isPending && completingId === item.routine_id) ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-5 h-5 stroke-[2.5] group-hover:hidden" />
+                            <X className="w-4 h-4 hidden group-hover:block" />
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center transition-all bg-emerald-500/20 text-emerald-400">
+                        <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                      </div>
+                    )
                   ) : (
                     <button 
                       onClick={() => item.isGoogleTask ? onCompleteGoogleTask?.(item.id) : handleCompleteRoutine(scheduledRoutines.find(r => r.id === item.id)!)}
@@ -283,11 +465,31 @@ export function RoutineTimeline({ initialItems, scheduledRoutines = [], googleTa
                   </div>
                 </div>
 
-                <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border shadow-inner ${
-                  isCompleted ? 'bg-slate-800/80 text-slate-300 border-slate-700/50' : 'bg-slate-900 text-slate-600 border-slate-800/30'
-                }`}>
-                  {item.time === '23:59' ? 'Dia Todo' : item.time}
-                </span>
+                <div className="flex items-center gap-3">
+                  {canEditOrDelete && (
+                    <div className="hidden group-hover:flex items-center gap-1 mr-2">
+                      <button 
+                        onClick={() => startEditing(item)}
+                        className="p-1.5 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                        title="Editar"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteLog(item.id, item.type)}
+                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                  <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border shadow-inner ${
+                    isCompleted ? 'bg-slate-800/80 text-slate-300 border-slate-700/50' : 'bg-slate-900 text-slate-600 border-slate-800/30'
+                  }`}>
+                    {item.time === '23:59' ? 'Dia Todo' : item.time}
+                  </span>
+                </div>
               </div>
             )
           })

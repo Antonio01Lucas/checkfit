@@ -143,3 +143,31 @@ export async function completeScheduledRoutine(routineId: string): Promise<{ suc
   revalidatePath('/dashboard')
   return { success: true }
 }
+
+/**
+ * Desmarca uma rotina agendada que havia sido concluída no dia atual.
+ */
+export async function uncompleteScheduledRoutine(routineId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { success: false, error: 'Usuário não autenticado' }
+
+  const today = new Date()
+  const todayString = today.toISOString().split('T')[0] // YYYY-MM-DD
+
+  const { error } = await supabase
+    .from('routine_completions')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('routine_id', routineId)
+    .eq('completed_date', todayString)
+
+  if (error) {
+    console.error('Erro ao desmarcar rotina:', error)
+    return { success: false, error: 'Falha ao desmarcar a conclusão' }
+  }
+
+  revalidatePath('/dashboard')
+  return { success: true }
+}

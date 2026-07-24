@@ -1,0 +1,30 @@
+# 🛠 Edição e Exclusão na Linha do Tempo
+
+Você quer ter o poder de editar e apagar os registros soltos (Refeições, Treinos e Água) diretamente pela aba "Meu Dia". Como isso envolve diferentes tipos de dados, preparei este plano para garantir que a experiência fique perfeita.
+
+## O que será implementado:
+
+### 1. Botões de Ação na Linha do Tempo
+- Quando você passar o mouse por cima de um registro (Treino, Refeição ou Água) na linha do tempo, aparecerão dois novos ícones discretos do lado direito: **Editar (✏️)** e **Apagar (🗑️)**.
+
+### 2. Ação de Apagar (Excluir)
+- Ao clicar na lixeira, o item vai sumir imediatamente da tela (de forma otimista) e será removido do banco de dados correspondente (`workout_logs`, `meal_logs` ou `hydration_logs`).
+- **Impacto**: Se você apagar uma Água pela linha do tempo, o seu total de água do dia vai recalcular e diminuir automaticamente no Card de Água!
+
+### 3. Ação de Editar
+- Ao clicar no lápis de edição, a linha do item vai se transformar num pequeno formulário (semelhante ao que fizemos nas Tasks do Google).
+- **Para Refeições**: Você poderá alterar o Nome e as Calorias.
+- **Para Treinos**: Você poderá alterar o Nome, Duração e Calorias.
+- **Para Água**: Você poderá alterar a quantidade em mL.
+- Haverá um botão "Salvar" e "Cancelar". Ao salvar, a tela atualiza na hora e manda os novos dados pro banco.
+
+### 4. Back-end (`actions/routine.ts`)
+- Vou criar duas novas funções seguras no servidor: `deleteRoutineLog` e `updateRoutineLog`, que vão saber exatamente em qual tabela do banco de dados mexer dependendo do tipo do item.
+
+---
+
+> [!IMPORTANT]
+> - O recurso de editar/apagar servirá para os registros feitos **hoje**. 
+> - A edição da quantidade de água pela linha do tempo será refletida no card principal de água.
+>
+> Tudo certo com esse escopo? Se sim, clique em **Proceed** e eu começo a codar!

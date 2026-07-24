@@ -1,0 +1,21 @@
+# ✏️ Edição de Água e Hábitos
+
+Aqui está o plano para darmos mais controle sobre os registros que você já fez:
+
+### 1. Remover Água (`WaterTracker`)
+Atualmente temos os botões rápidos de `+250mL`, `+500mL` e `Outro`.
+Vou melhorar a seção `Outro` (Custom). Quando você abrir essa opção:
+- Você poderá digitar o valor (ex: `300`).
+- Teremos dois botões: **Adicionar** e **Remover**.
+- Clicar em Remover vai subtrair o valor informado do seu total diário, de forma otimista e no banco de dados.
+
+### 2. Desmarcar Hábito Concluído (`RoutineTimeline`)
+Atualmente, quando você marca um Hábito/Rotina como concluído, ele fica com um ícone verde `Check` fixo na linha do tempo.
+- Vou transformar esse ícone verde em um **botão clicável**.
+- Ao clicar nele, ele vai acionar a ação `Desmarcar` (removendo a conclusão do banco de dados).
+- O item voltará automaticamente para o estado "Pendente", aguardando ser marcado de novo!
+
+---
+
+> [!IMPORTANT]
+> Apenas para alinhar: a opção de desmarcar (voltar para pendente) funcionará para os **Hábitos Planejados**. Entradas manuais (como adicionar um almoço solto que não estava planejado) ainda não terão edição direta pela timeline nessa versão, ok? Se estiver de acordo, clique em **Proceed**!

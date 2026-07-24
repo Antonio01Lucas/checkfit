@@ -123,3 +123,106 @@ export async function completeGoogleTask(taskId: string): Promise<{ success: boo
     return { success: false, error: 'Erro de conexão com Google' }
   }
 }
+
+/**
+ * Cria uma nova tarefa no Google Tasks
+ */
+export async function createGoogleTask(title: string, notes?: string): Promise<{ task: GoogleTask | null; error: string | null }> {
+  const supabase = await createClient()
+
+  // 1. Verificar o usuário logado
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { task: null, error: 'Usuário não autenticado' }
+
+  // 2. Buscar token no banco
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('google_access_token')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.google_access_token) {
+    return { task: null, error: 'not_connected' }
+  }
+
+  const accessToken = profile.google_access_token
+
+  try {
+    const url = `https://tasks.googleapis.com/tasks/v1/lists/@default/tasks`
+    console.log('Criando tarefa no Google:', url)
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title,
+        notes: notes || undefined
+      })
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      console.error('Google Tasks API Error na criação:', errorBody)
+      return { task: null, error: `Erro na API: ${response.status}` }
+    }
+
+    const newTask = await response.json()
+    return { task: newTask, error: null }
+  } catch (error) {
+    console.error('Erro ao criar tarefa:', error)
+    return { task: null, error: 'Erro de conexão com Google' }
+  }
+}
+
+/**
+ * Atualiza o título de uma tarefa no Google Tasks
+ */
+export async function updateGoogleTask(taskId: string, title: string, notes?: string): Promise<{ success: boolean; task: GoogleTask | null; error: string | null }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, task: null, error: 'Usuário não autenticado' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('google_access_token')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.google_access_token) {
+    return { success: false, task: null, error: 'not_connected' }
+  }
+
+  const accessToken = profile.google_access_token
+
+  try {
+    const url = `https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/${taskId}`
+
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title,
+        ...(notes !== undefined && { notes })
+      })
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      console.error('Google Tasks API Error na atualização:', errorBody)
+      return { success: false, task: null, error: `Erro na API: ${response.status}` }
+    }
+
+    const updatedTask = await response.json()
+    return { success: true, task: updatedTask, error: null }
+  } catch (error) {
+    console.error('Erro ao atualizar tarefa:', error)
+    return { success: false, task: null, error: 'Erro de conexão com Google' }
+  }
+}

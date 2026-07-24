@@ -1,0 +1,24 @@
+# ✍️ Criação de Tarefas no Google Tasks
+
+Implementamos o caminho inverso com sucesso! Agora a Dashboard do CheckFit não apenas lê as suas tarefas do Google Tasks, mas também permite que você crie novas tarefas diretamente pelo nosso aplicativo.
+
+## O que foi implementado
+
+1. **Server Action para Criação (`createGoogleTask`)**
+   - Adicionamos a lógica para enviar uma requisição `POST` segura para a API do Google Tasks, utilizando o token de acesso da sua conta Google associada.
+   - Tratamento de erro aprimorado para lidar com tokens expirados ou problemas de conexão.
+
+2. **Interface de "Adição Rápida"**
+   - Inserimos um botão de "Nova Tarefa" (`+`) no cabeçalho do widget **Suas Tarefas**.
+   - Ao clicar, ele expande um campo de input simples e direto ("O que você precisa fazer?").
+   - Você pode confirmar a criação clicando em "Add" ou simplesmente apertando `Enter`. O botão `Esc` fecha o formulário sem salvar.
+
+3. **Atualização Otimista (UX)**
+   - Assim que você confirma, a tarefa já aparece instantaneamente na sua lista na dashboard (tanto no widget quanto em "Próximos Passos"), enquanto a requisição acontece em segundo plano. 
+   - Se por algum motivo o Google rejeitar a criação (como queda de internet), a tarefa é removida graciosamente da lista para evitar inconsistência.
+
+## Como Testar
+1. Acesse a Dashboard (e certifique-se de que sua conta do Google Workspace está conectada).
+2. No card "Suas Tarefas", clique no ícone de `+`.
+3. Digite o nome de uma tarefa (ex: "Ir ao mercado amanhã") e aperte `Enter`.
+4. Veja a tarefa aparecer imediatamente na sua lista. Se você abrir o Google Agenda (onde ficam os Tasks), a tarefa já estará lá!
