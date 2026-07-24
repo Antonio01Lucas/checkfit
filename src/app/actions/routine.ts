@@ -199,3 +199,90 @@ export async function logMeal(name: string, calories: number) {
   revalidatePath('/dashboard')
   return data
 }
+
+/**
+ * Remove um log (treino, refeição ou água).
+ */
+export async function deleteRoutineLog(id: string, type: RoutineCategory): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { success: false, error: 'Usuário não autenticado' }
+
+  let table = ''
+  if (type === 'workout') table = 'workout_logs'
+  else if (type === 'meal') table = 'meal_logs'
+  else if (type === 'hydration') table = 'hydration_logs'
+  else return { success: false, error: 'Tipo inválido' }
+
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error(`Erro ao apagar log de ${type}:`, error)
+    return { success: false, error: 'Falha ao apagar registro' }
+  }
+
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+/**
+ * Atualiza um log existente.
+ */
+export async function updateRoutineLog(
+  id: string,
+  type: RoutineCategory,
+  data: {
+    title?: string
+    calories?: number
+    duration?: number
+    amount?: number
+    logged_at?: string
+  }
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { success: false, error: 'Usuário não autenticado' }
+
+  let table = ''
+  const updateData: Record<string, string | number> = {}
+
+  if (type === 'workout') {
+    table = 'workout_logs'
+    if (data.title !== undefined) updateData.workout_name = data.title
+    if (data.calories !== undefined) updateData.calories_burned = data.calories
+    if (data.duration !== undefined) updateData.duration_minutes = data.duration
+  } else if (type === 'meal') {
+    table = 'meal_logs'
+    if (data.title !== undefined) updateData.meal_name = data.title
+    if (data.calories !== undefined) updateData.calories = data.calories
+  } else if (type === 'hydration') {
+    table = 'hydration_logs'
+    if (data.amount !== undefined) updateData.amount_ml = data.amount
+  } else {
+    return { success: false, error: 'Tipo inválido' }
+  }
+
+  if (data.logged_at !== undefined) {
+    updateData.logged_at = data.logged_at
+  }
+
+  const { error } = await supabase
+    .from(table)
+    .update(updateData)
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error(`Erro ao atualizar log de ${type}:`, error)
+    return { success: false, error: 'Falha ao atualizar registro' }
+  }
+
+  revalidatePath('/dashboard')
+  return { success: true }
+}

@@ -1,0 +1,28 @@
+# ✏️ Edição de Tarefas e Horários (Opção 1)
+
+Vamos implementar a edição de tarefas com suporte a horários inteligentes, usando o "truque" de salvar a hora no título da tarefa lá no Google Tasks para contornar a limitação da API.
+
+## Mudanças Propostas
+
+### 1. Novo Server Action (`src/app/actions/tasks.ts`)
+- **[NEW] `updateGoogleTask(taskId, title, notes)`**: Função para fazer um `PATCH` na API do Google Tasks atualizando o título da tarefa.
+
+### 2. Parse Inteligente de Horário
+- Vamos criar uma função utilitária para buscar no título o formato `[HH:MM]` (ex: `[22:00] Ceia`).
+- **No `DashboardClient` (Próximos Passos)**: Ao mapear as tarefas, se ela tiver esse horário embutido no título, usaremos ele como `scheduled_time` em vez de `23:59:59`. E para exibição, vamos "limpar" o título (mostrar só "Ceia").
+- **Na `RoutineTimeline`**: Faremos o mesmo filtro para exibir a tarefa no horário certinho da linha do tempo.
+
+### 3. Interface de Edição (`src/components/dashboard/tasks-widget.tsx`)
+- Adicionaremos um botão de "Editar" (ícone de lápis) que aparece ao passar o mouse sobre uma tarefa.
+- Ao clicar, a tarefa se transforma num pequeno formulário inline:
+  - **Campo de Título**: Para mudar o nome.
+  - **Campo de Horário (Opcional)**: Um campo do tipo `time` (ex: 22:00).
+- Ao salvar, nosso código junta os dois: se tiver horário, envia para a API como `[22:00] Título`.
+
+### 4. Atualização Otimista
+- No `DashboardClient`, criaremos o `handleUpdateGoogleTask(taskId, newTitle)`. Ele atualizará a UI na hora, intercalando a tarefa na posição correta da fila se o horário tiver mudado, enquanto salva no Google em background.
+
+---
+
+> [!IMPORTANT]
+> **Você aprova essa abordagem?** Se sim, clique em **Proceed** e já começamos a codar!

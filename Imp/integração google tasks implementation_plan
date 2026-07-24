@@ -1,0 +1,35 @@
+# Integração do Google Tasks
+
+Atualmente, o `TasksWidget` apenas lista as tarefas pendentes importadas da API do Google Tasks. Para tornar isso uma integração real com o CheckFit, precisamos permitir interação e unificação dessas tarefas com a rotina do usuário.
+
+## Proposed Changes
+
+### 1. Concluir Tarefas Diretamente do Dashboard
+Permitir que o usuário clique na checkbox de uma tarefa no `TasksWidget` e isso marque a tarefa como concluída no Google Tasks através da API.
+
+#### [MODIFY] src/app/actions/tasks.ts
+- Adicionar função `completeGoogleTask(taskId: string)` usando o endpoint `PATCH https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/{task}`.
+
+#### [MODIFY] src/components/dashboard/tasks-widget.tsx
+- Adicionar estado de `loading` individual por tarefa.
+- Disparar `completeGoogleTask` ao clicar na tarefa e atualizá-la otimisticamente (removendo da lista ou marcando com `CheckCircle2`).
+
+---
+
+### 2. Sincronizar Google Tasks com a Linha do Tempo (RoutineTimeline) - Opcional
+Mostrar tarefas que tenham prazo (`due date` para o dia de hoje) diretamente na timeline do "Meu Dia", junto com treinos e refeições.
+
+#### [MODIFY] src/app/dashboard/dashboard-client.tsx
+- Passar os `tasks` (via hook ou prop) para dentro do `RoutineTimeline`.
+#### [MODIFY] src/components/dashboard/routine-timeline.tsx
+- Mapear tarefas do Google como eventos `pending` na timeline (usando o ícone de CheckSquare).
+
+## Open Questions
+
+> [!WARNING]
+> Você gostaria de implementar apenas a ação de **concluir tarefas do Google direto pelo CheckFit**, ou também quer que elas apareçam na **linha do tempo "Meu Dia"** junto com seus treinos e hábitos?
+
+## Verification Plan
+1. Clicar em uma tarefa no `TasksWidget`.
+2. Verificar se a tarefa some da lista e é atualizada no aplicativo oficial do Google Tasks.
+3. Se aplicável, validar se tarefas com prazo para hoje aparecem corretamente na linha do tempo.

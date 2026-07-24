@@ -1,0 +1,6 @@
+# Integração do Google Tasks
+
+- [ ] Implementar a função `completeGoogleTask` em `src/app/actions/tasks.ts`
+- [ ] Atualizar o `TasksWidget` (`src/components/dashboard/tasks-widget.tsx`) para usar `completeGoogleTask` e atualizar o estado
+- [ ] Modificar `src/app/dashboard/dashboard-client.tsx` para passar as tarefas do widget (ou buscar na page e passar) para a `RoutineTimeline`. *Wait*, `TasksWidget` fetches tasks client-side right now (`useEffect`). We might want to lift that state up to `DashboardClient` or fetch it server-side in `page.tsx` and pass it down as props.
+- [ ] Atualizar `src/components/dashboard/routine-timeline.tsx` para exibir e permitir a conclusão das tarefas do Google.

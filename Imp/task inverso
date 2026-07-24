@@ -1,0 +1,6 @@
+# Adicionar Tarefa ao Google Tasks
+
+- [x] Implementar a função `createGoogleTask(title, notes)` em `src/app/actions/tasks.ts`.
+- [x] Adicionar o formulário de "Nova Tarefa" no `src/components/dashboard/tasks-widget.tsx` e receber a prop `onAddTask`.
+- [x] Implementar a lógica `handleCreateGoogleTask` em `src/app/dashboard/dashboard-client.tsx` com atualização otimista.
+- [x] Testar integração (re-verificar se compila corretamente).

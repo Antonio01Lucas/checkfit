@@ -9,7 +9,8 @@ import { AIBanner } from '@/components/dashboard/ai-banner'
 import { CalendarWidget } from '@/components/dashboard/calendar-widget'
 import { TasksWidget } from '@/components/dashboard/tasks-widget'
 import { type RoutineItem } from '@/app/actions/routine'
-import { getGoogleTasks, completeGoogleTask, type GoogleTask } from '@/app/actions/tasks'
+import { getTodayCalendarEvents, createGoogleEvent, type GoogleEvent } from '@/app/actions/calendar'
+import { getGoogleTasks, completeGoogleTask, createGoogleTask, updateGoogleTask, type GoogleTask } from '@/app/actions/tasks'
 import type { RoutineItem as DBScheduledRoutine } from '@/types/database'
 import { 
   Dumbbell, 
@@ -46,8 +47,13 @@ export default function DashboardClient({
   const [tasksError, setTasksError] = useState<string | null>(null)
   const [completingTask, setCompletingTask] = useState<string | null>(null)
 
+  const [calendarEvents, setCalendarEvents] = useState<GoogleEvent[]>([])
+  const [calendarLoading, setCalendarLoading] = useState(true)
+  const [calendarError, setCalendarError] = useState<string | null>(null)
+
   useEffect(() => {
     let isMounted = true
+    
     async function fetchTasks() {
       const { tasks: fetchedTasks, error: fetchError } = await getGoogleTasks()
       if (isMounted) {
@@ -56,7 +62,19 @@ export default function DashboardClient({
         setTasksLoading(false)
       }
     }
+    
+    async function fetchCalendar() {
+      const { events, error } = await getTodayCalendarEvents()
+      if (isMounted) {
+        if (error) setCalendarError(error)
+        else setCalendarEvents(events)
+        setCalendarLoading(false)
+      }
+    }
+    
     fetchTasks()
+    fetchCalendar()
+    
     return () => { isMounted = false }
   }, [])
 
@@ -79,29 +97,156 @@ export default function DashboardClient({
     setCompletingTask(null)
   }
 
+  const handleCreateGoogleTask = async (title: string) => {
+    // Atualização otimista
+    const tempId = `temp-${Date.now()}`
+    const tempTask: GoogleTask = {
+      id: tempId,
+      title,
+      status: 'needsAction',
+      updated: new Date().toISOString()
+    }
+    
+    setTasks(prev => [tempTask, ...prev])
+    
+    const { task: newTask, error } = await createGoogleTask(title)
+    
+    if (error || !newTask) {
+      console.error('Falha ao criar tarefa:', error)
+      // Reverter
+      setTasks(prev => prev.filter(t => t.id !== tempId))
+      return
+    }
+    
+    // Substituir tempId pelo ID real retornado pela API
+    setTasks(prev => prev.map(t => t.id === tempId ? newTask : t))
+  }
+
+  const handleUpdateGoogleTask = async (taskId: string, newTitle: string) => {
+    // Atualização otimista
+    const originalTask = tasks.find(t => t.id === taskId)
+    if (!originalTask) return
+
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title: newTitle } : t))
+    
+    const { success, error } = await updateGoogleTask(taskId, newTitle)
+    
+    if (!success) {
+      console.error('Falha ao atualizar tarefa:', error)
+      setTasks(prev => prev.map(t => t.id === taskId ? originalTask : t))
+    }
+  }
+
+  const handleCreateGoogleEvent = async (title: string, date?: string, startTime?: string, endTime?: string, recurrence?: string) => {
+    const tempId = `temp-${Date.now()}`
+    
+    const now = new Date()
+    
+    let baseDate: Date;
+    if (date) {
+      const [y, m, d] = date.split('-');
+      baseDate = new Date(Number(y), Number(m) - 1, Number(d));
+    } else {
+      baseDate = new Date(now);
+    }
+    
+    let startIso: string | undefined
+    let endIso: string | undefined
+    
+    if (startTime) {
+      const [h, m] = startTime.split(':')
+      const startD = new Date(baseDate)
+      startD.setHours(Number(h), Number(m), 0, 0)
+      startIso = startD.toISOString()
+    }
+    
+    if (endTime) {
+      const [h, m] = endTime.split(':')
+      const endD = new Date(baseDate)
+      endD.setHours(Number(h), Number(m), 0, 0)
+      endIso = endD.toISOString()
+    }
+    
+    // Data otimista para UI
+    const optStart = startIso || (() => {
+      const d = new Date(baseDate)
+      d.setMinutes(Math.ceil(now.getMinutes() / 15) * 15)
+      d.setSeconds(0, 0)
+      return d.toISOString()
+    })()
+    
+    const optEnd = endIso || (() => {
+      const d = new Date(optStart)
+      d.setHours(d.getHours() + 1)
+      return d.toISOString()
+    })()
+    
+    const tempEvent: GoogleEvent = {
+      id: tempId,
+      summary: title,
+      start: { dateTime: optStart },
+      end: { dateTime: optEnd },
+      htmlLink: '#'
+    }
+    
+    setCalendarEvents(prev => {
+      const newArray = [...prev, tempEvent]
+      newArray.sort((a, b) => {
+        const timeA = a.start.dateTime || a.start.date || ''
+        const timeB = b.start.dateTime || b.start.date || ''
+        return timeA.localeCompare(timeB)
+      })
+      return newArray
+    })
+    
+    const { event: newEvent, error } = await createGoogleEvent(title, startIso, endIso, recurrence)
+    
+    if (error || !newEvent) {
+      console.error('Falha ao criar evento:', error)
+      setCalendarEvents(prev => prev.filter(e => e.id !== tempId))
+      return
+    }
+    
+    setCalendarEvents(prev => prev.map(e => e.id === tempId ? newEvent : e))
+  }
+
   // Function to get the next steps based on current time
   const getNextSteps = () => {
     const now = new Date()
     const currentTimeString = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
     
-    // Find routines that are scheduled after the current time
     const upcomingRoutines = scheduledRoutines
       .filter(r => r.scheduled_time >= currentTimeString)
       .map(r => ({ ...r, category: r.category as string }))
     
-    // Pegamos todas as tarefas pendentes
-    const upcomingTasks = tasks.map(t => ({
-      id: t.id,
-      category: 'task',
-      title: t.title || '(Sem título)',
-      description: t.notes || 'Google Task',
-      scheduled_time: '23:59:59'
-    }))
-
-    // Combinamos rotinas primeiro (ordenadas por horário) e depois as tarefas
-    const combined = [...upcomingRoutines, ...upcomingTasks]
+    const upcomingTasks = tasks.map(t => {
+      const match = (t.title || '').match(/^\[([0-9]{2}:[0-9]{2})\]\s*(.*)$/)
+      return {
+        id: t.id,
+        category: 'task',
+        title: match ? match[2] : (t.title || '(Sem título)'),
+        description: t.notes || 'Google Task',
+        scheduled_time: match ? `${match[1]}:00` : '23:59:59',
+        hasTime: !!match
+      }
+    })
     
-    // Retornamos até 3 passos
+    // Tarefas COM horário concorrem de igual pra igual na linha do tempo principal com as rotinas
+    const timedTasks = upcomingTasks.filter(t => t.hasTime && t.scheduled_time >= currentTimeString)
+    const timelessTasks = upcomingTasks.filter(t => !t.hasTime)
+    
+    // Mesclamos e ordenamos os itens COM HORA
+    const scheduledItems = [...upcomingRoutines, ...timedTasks]
+    scheduledItems.sort((a, b) => a.scheduled_time.localeCompare(b.scheduled_time))
+
+    // Intercalamos os itens com hora e as tarefas SEM HORA para que as sem hora não fiquem perdidas no fim do dia
+    const combined = []
+    let sIdx = 0, tIdx = 0
+    while (sIdx < scheduledItems.length || tIdx < timelessTasks.length) {
+      if (sIdx < scheduledItems.length) combined.push(scheduledItems[sIdx++])
+      if (tIdx < timelessTasks.length) combined.push(timelessTasks[tIdx++])
+    }
+    
     return combined.slice(0, 3)
   }
 
@@ -168,7 +313,7 @@ export default function DashboardClient({
                           </span>
                         ) : (
                           <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${categoryConfig.task.color} ${categoryConfig.task.bg} border-current/20 whitespace-nowrap`}>
-                            Pendente
+                            {step.scheduled_time === '23:59:59' ? 'Pendente' : step.scheduled_time.substring(0, 5)}
                           </span>
                         )}
                       </div>
@@ -194,7 +339,12 @@ export default function DashboardClient({
             </div>
 
             {/* Integração Google Calendar */}
-            <CalendarWidget />
+            <CalendarWidget 
+              events={calendarEvents}
+              loading={calendarLoading}
+              error={calendarError}
+              onAddEvent={handleCreateGoogleEvent}
+            />
 
             {/* Integração Google Tasks */}
             <TasksWidget 
@@ -203,6 +353,8 @@ export default function DashboardClient({
               error={tasksError}
               completingTask={completingTask}
               onCompleteTask={handleCompleteGoogleTask}
+              onAddTask={handleCreateGoogleTask}
+              onEditTask={handleUpdateGoogleTask}
             />
           </div>
 
